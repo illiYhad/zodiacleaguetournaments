@@ -1,0 +1,63 @@
+import { PlayerProfileData } from "../types/player";
+
+export const MOCK_PLAYER_DATA: PlayerProfileData = {
+  name: "JL Pa1ze",
+  tag: "#TTV",
+  platform: "PC",
+  avatarUrl: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80",
+  currentRank: {
+    tier: "Immortal 3",
+    rr: 452,
+    leaderboard: "#1,240",
+    peakTier: "Radiant (612 RR)",
+    peakDate: "Episode 7: Act 3",
+  },
+  stats: {
+    damagePerRound: 168.4,
+    kdRatio: 1.28,
+    headshotPct: 32.4,
+    winRate: 61.0,
+    matchesWon: 64,
+    matchesLost: 41,
+    totalKills: 2180,
+  },
+  topAgents: [
+    { name: "Jett", role: "Duelist", hours: 48, winRate: 64, kd: 1.34 },
+    { name: "Omen", role: "Controller", hours: 26, winRate: 58, kd: 1.18 },
+    { name: "Sova", role: "Initiator", hours: 14, winRate: 57, kd: 1.12 },
+  ],
+  recentMatches: [
+    {
+      id: "m-1",
+      map: "Ascent",
+      agent: "Jett",
+      isVictory: true,
+      score: "13 : 8",
+      kda: "24 / 12 / 5",
+      combatScore: 312,
+      badge: "MATCH MVP",
+      timeAgo: "2 hours ago",
+    },
+    {
+      id: "m-2",
+      map: "Bind",
+      agent: "Raze",
+      isVictory: false,
+      score: "9 : 13",
+      kda: "18 / 16 / 3",
+      combatScore: 235,
+      badge: "TEAM MVP",
+      timeAgo: "4 hours ago",
+    },
+    {
+      id: "m-3",
+      map: "Haven",
+      agent: "Omen",
+      isVictory: true,
+      score: "13 : 11",
+      kda: "19 / 14 / 8",
+      combatScore: 210,
+      timeAgo: "Yesterday",
+    },
+  ],
+};
