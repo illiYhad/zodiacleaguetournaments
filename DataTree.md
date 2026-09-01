@@ -1,6 +1,6 @@
 # 🌳 AVELAi Master Data Tree & Schema Map (V1.06)
 
-> 💎 **Last Updated:** เวลา 06:40:19 อังคาร 01/09/2026
+> 💎 **Last Updated:** เวลา 16:23:32 อังคาร 01/09/2026
 
 ีวิธีใช้ = node update-tree.mjs
 
@@ -9,6 +9,8 @@
 ```text
 avelai/
 ├── app/
+│   ├── admin/
+│   │   └── store/
 │   ├── api/
 │   │   ├── arena/
 │   │   │   └── ticket/
@@ -62,6 +64,10 @@ avelai/
 │   │               └── route.ts
 │   ├── auth/
 │   │   ├── callback/
+│   │   │   ├── riot/
+│   │   │   │   └── route.ts
+│   │   │   └── route.ts
+│   │   ├── riot/
 │   │   │   └── route.ts
 │   │   └── signout/
 │   │       └── route.ts
@@ -69,12 +75,12 @@ avelai/
 │   │   └── page.tsx
 │   ├── leaderboard/
 │   │   └── page.tsx
+│   ├── lobby/
 │   ├── login/
 │   │   └── page.tsx
 │   ├── match/
 │   │   └── [matchId]/
 │   │       ├── components/
-│   │       │   ├── AdvantageGraph.tsx
 │   │       │   ├── DeepAnalyticsBoard.tsx
 │   │       │   ├── KPBreakdownTable.tsx
 │   │       │   ├── KPDistributionChart.tsx
@@ -82,8 +88,7 @@ avelai/
 │   │       │   ├── MatchHeader.tsx
 │   │       │   ├── OverviewTable.tsx
 │   │       │   ├── PerformanceRadar.tsx
-│   │       │   ├── TabNav.tsx
-│   │       │   └── TowerMapGrid.tsx
+│   │       │   └── TabNav.tsx
 │   │       └── page.tsx
 │   ├── matches/
 │   │   └── page.tsx
@@ -96,6 +101,7 @@ avelai/
 │   │   ├── [userId]/
 │   │   │   └── page.tsx
 │   │   └── page.tsx
+│   ├── schedule/
 │   ├── status/
 │   │   └── page.tsx
 │   ├── subscribe/
@@ -134,7 +140,11 @@ avelai/
 │       ├── prizeCalculator.ts
 │       └── swissPairing.ts
 ├── src/
-│   └── components/
-│       └── profile/
-│           └── PlayerVerticalProfile.tsx
+│   ├── components/
+│   │   └── profile/
+│   │       ├── MatchHistoryFeed.tsx
+│   │       └── PlayerVerticalProfile.tsx
+│   └── types/
+│       ├── database.types.ts
+│       └── valorant.ts
 ```

@@ -1,13 +1,12 @@
-// app/page.tsx หรือ app/login/page.tsx
+// app/login/page.tsx
 'use client';
 
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Provider } from '@supabase/supabase-js';
+import { Sparkles, X, ArrowRight } from 'lucide-react';
 
-// ข้อมูล 5 ผู้เล่นแชมป์ Spring พร้อมสถิติ Valorant Matrix
 const SPRING_CHAMPIONS = {
   teamName: 'ZODIAC APEX',
   record: '64W - 41L (61% WR)',
@@ -23,9 +22,17 @@ const SPRING_CHAMPIONS = {
 export default function LoginPage() {
   const [loading, setLoading] = useState<'google' | 'riot' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRiotModalOpen, setIsRiotModalOpen] = useState(false);
+
+  // States สำหรับฟอร์มกรอก Riot ID
+  const [riotId, setRiotId] = useState('');
+  const [tagline, setTagline] = useState('');
+  const [region, setRegion] = useState('ap');
+
   const router = useRouter();
   const supabase = createClient();
 
+  // 1. Google OAuth ผ่าน Supabase
   async function handleGoogleLogin() {
     setLoading('google');
     setError(null);
@@ -39,19 +46,45 @@ export default function LoginPage() {
     }
   }
 
-  async function handleRiotLogin() {
-    setLoading('riot');
+  // 2. ล็อกอินด้วย Riot ID โดยตรง
+  const handleManualRiotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError(null);
-    const riotProvider = 'riot' as unknown as Provider;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: riotProvider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) {
-      setError(error.message);
+
+    const cleanId = riotId.trim();
+    const cleanTag = tagline.replace(/#/g, '').trim().toUpperCase();
+
+    if (!cleanId || !cleanTag) {
+      setError('กรุณากรอก Riot ID และ Tagline ให้ครบถ้วน');
+      return;
+    }
+
+    setLoading('riot');
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const athleteSession = {
+        riotId: cleanId,
+        tagline: cleanTag,
+        fullRiotId: `${cleanId}#${cleanTag}`,
+        region,
+        role: 'Duelist',
+        rank: 'Ascendant 2',
+        zp: 1250,
+        ap: 450,
+        authenticatedVia: 'MANUAL_RIOT_ID',
+      };
+
+      localStorage.setItem('zodiac_user', JSON.stringify(athleteSession));
+      setIsRiotModalOpen(false);
+      router.push('/dashboard');
+    } catch {
+      setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+    } finally {
       setLoading(null);
     }
-  }
+  };
 
   return (
     <main className="min-h-screen bg-[#050508] text-white flex flex-col items-center justify-center p-3 lg:p-6 font-mono relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
@@ -95,14 +128,14 @@ export default function LoginPage() {
         </p>
       </header>
 
-      {/* 5-Card Grid Showcase with 3D Depth & Wind-Sway Physics */}
+      {/* 5-Card Grid Showcase */}
       <div className="relative z-10 w-full max-w-[1520px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-5 items-center mb-6">
         
         {/* CARD 1: ZODIAC LEAGUE */}
         <div 
-          className="card-sway-1 relative h-[550px] rounded-2xl overflow-hidden border-2 border-purple-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-purple-400"
+          className="relative h-[550px] rounded-2xl overflow-hidden border-2 border-purple-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-purple-400"
           style={{
-            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(168,85,247,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(168,85,247,0.2)',
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(168,85,247,0.35)',
           }}
         >
           <div className="absolute inset-0 -z-10">
@@ -143,11 +176,11 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* CARD 2: SPRING (CLEAR CONTRAST HUD PLATE) */}
+        {/* CARD 2: SPRING (ไร้กรอบสี่เหลี่ยม + ขอบดำเฟดจาง) */}
         <div 
-          className="card-sway-2 relative h-[550px] rounded-2xl overflow-hidden border-2 border-emerald-500/80 bg-zinc-950/50 flex flex-col justify-between p-3.5 transition-transform duration-300 hover:scale-[1.03] hover:border-emerald-400"
+          className="relative h-[550px] rounded-2xl overflow-hidden border-2 border-emerald-500/80 bg-zinc-950/50 flex flex-col justify-between p-3.5 transition-transform duration-300 hover:scale-[1.03] hover:border-emerald-400"
           style={{
-            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(34,197,94,0.2)',
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(34,197,94,0.35)',
           }}
         >
           <div className="absolute inset-0 -z-10">
@@ -169,17 +202,22 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* SPRING TITLE PLATE: ตัดแสงจ้าด้วย Dark Plate ชัดเจน 100% */}
-          <div className="my-auto w-full rounded-2xl py-3.5 px-3 bg-black/80 backdrop-blur-md border border-emerald-500/50 shadow-[0_0_25px_rgba(16,185,129,0.35)] text-center">
+          {/* Title Area: SPRING แบบไร้กรอบ พร้อมขอบดำเฟดเข้ม */}
+          <div className="my-auto w-full text-center py-2">
             <h2 
               className="w-full text-center text-4xl sm:text-5xl font-black text-emerald-300 tracking-tight leading-none"
               style={{
-                textShadow: '0 0 15px #10B981, 0 0 30px #059669',
+                textShadow: '0 0 15px #10B981, 0 0 30px #059669, 0 4px 14px rgba(0,0,0,0.98), 0 0 40px rgba(0,0,0,0.95), 0 0 2px #000000',
               }}
             >
               SPRING
             </h2>
-            <p className="text-[10px] text-zinc-300 uppercase tracking-widest font-black mt-1.5 drop-shadow">
+            <p 
+              className="text-[10px] text-zinc-200 uppercase tracking-widest font-black mt-2"
+              style={{
+                textShadow: '0 2px 10px rgba(0,0,0,0.98), 0 0 20px rgba(0,0,0,0.95), 0 0 4px #000000',
+              }}
+            >
               CONCLUDED • {SPRING_CHAMPIONS.record}
             </p>
           </div>
@@ -197,7 +235,7 @@ export default function LoginPage() {
               {SPRING_CHAMPIONS.players.map((p, idx) => (
                 <div
                   key={p.name}
-                  className="flex items-center justify-between bg-white/[0.04] hover:bg-white/[0.08] px-2 py-1 rounded border border-white/5 transition-colors text-[10px]"
+                  className="flex items-center justify-between bg-white/[0.04] hover:bg-white/[0.08] px-2 py-1 rounded border border-white/5 text-[10px]"
                 >
                   <div className="flex items-center gap-1.5 truncate max-w-[125px]">
                     <span className="font-bold text-emerald-400 text-[9px]">#{idx + 1}</span>
@@ -207,17 +245,9 @@ export default function LoginPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 font-mono text-[9px]">
-                    <span className="text-zinc-300 font-bold">
-                      <span className="text-zinc-500 text-[8px]">K/D </span>
-                      {p.kda}
-                    </span>
-                    <span className="text-amber-300 font-bold">
-                      <span className="text-zinc-500 text-[8px]">ADR </span>
-                      {p.adr}
-                    </span>
-                    <span className="text-emerald-400 font-bold">
-                      {p.hs}
-                    </span>
+                    <span className="text-zinc-300 font-bold">{p.kda}</span>
+                    <span className="text-amber-300 font-bold">{p.adr}</span>
+                    <span className="text-emerald-400 font-bold">{p.hs}</span>
                   </div>
                 </div>
               ))}
@@ -225,11 +255,11 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* CARD 3: SUMMER (SUMMER OUTSIDE + ONLY NOW IN RED HUD BOX) */}
+        {/* CARD 3: SUMMER (LIVE สตรีมมิ่งมุมขวา + Logo ตรงกลางแทน NOW + ไร้กรอบ) */}
         <div 
-          className="card-sway-3 relative h-[600px] lg:-mt-5 rounded-2xl overflow-hidden border-[3px] border-amber-400 bg-zinc-950/40 flex flex-col justify-between p-4 z-20 transition-transform duration-300 hover:scale-[1.04]"
+          className="relative h-[600px] lg:-mt-5 rounded-2xl overflow-hidden border-[3px] border-amber-400 bg-zinc-950/40 flex flex-col justify-between p-4 z-20 transition-transform duration-300 hover:scale-[1.04]"
           style={{
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.95), 0 0 45px rgba(245,197,66,0.65), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 20px rgba(245,197,66,0.25)',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.95), 0 0 45px rgba(245,197,66,0.65)',
           }}
         >
           <div className="absolute inset-0 -z-10">
@@ -243,48 +273,55 @@ export default function LoginPage() {
             />
           </div>
           
-          {/* Header Bar */}
+          {/* Header Bar with Glowing LIVE Red Light */}
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black text-amber-300 bg-amber-950/90 border border-amber-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(245,197,66,0.5)]">
               SEASON 2 • APR-JUN
             </span>
-            <span className="text-[10px] font-black text-rose-400 bg-rose-950/80 border border-rose-500/50 px-2 py-0.5 rounded">
-              CIRCUIT ACTIVE
-            </span>
+            
+            {/* LIVE Streaming Badge สีแดงสดเรืองแสง */}
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600/90 border border-red-400 text-white shadow-[0_0_20px_rgba(239,68,68,0.9)] animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_#ffffff] animate-ping" />
+              <span className="text-[10px] font-black tracking-widest uppercase">
+                LIVE
+              </span>
+            </div>
           </div>
 
-          {/* ZONE: SUMMER ลอยนอกกรอบ + ในกรอบเหลือเฉพาะ NOW */}
-          <div className="my-auto w-full flex flex-col items-center">
-            
-            {/* 1. SUMMER ลอยเด่นนอกกรอบ */}
-            <h2
-              className="w-full text-center text-4xl sm:text-5xl font-black tracking-tight leading-none text-[#FFF4CC] mb-2.5"
+          {/* SUMMER + Logo Zone (ไร้กรอบสี่เหลี่ยมดำ พร้อมขอบเงาดำเฟด) */}
+          <div className="my-auto w-full flex flex-col items-center justify-center py-2">
+            <h2 
+              className="w-full text-center text-4xl sm:text-5xl font-black tracking-tight leading-none text-[#FFF4CC] mb-2"
               style={{
-                textShadow: '0 0 12px #F5C542, 0 0 25px #E67E22, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+                textShadow: '0 0 15px #F5C542, 0 0 30px #E67E22, 0 4px 16px rgba(0,0,0,0.98), 0 0 35px rgba(0,0,0,0.95), 0 0 2px #000000',
               }}
             >
               SUMMER
             </h2>
 
-            {/* 2. กรอบสีดำขอบแดงนีออน ครอบเฉพาะ NOW */}
-            <div className="w-full rounded-2xl py-3 px-4 bg-black/85 backdrop-blur-md border-2 border-rose-600 shadow-[0_0_35px_rgba(225,29,72,0.6)] text-center">
-              <span
-                className="text-4xl sm:text-5xl font-black tracking-widest text-[#FF1A4B] block animate-[pulse_2.5s_ease-in-out_infinite]"
-                style={{
-                  fontFamily: "'Orbitron', sans-serif",
-                  textShadow: '0 0 15px #FF1A4B, 0 0 30px #E11D48, 0 0 50px #BE123C, 0 0 70px #881337',
-                }}
-              >
-                NOW
-              </span>
-              <span className="text-[9px] text-rose-300 uppercase tracking-widest font-black block mt-1 drop-shadow">
-                LIVE TOURNAMENT PHASE
-              </span>
-            </div>
+            {/* Logo กลางการ์ด SUMMER (ตัดพื้นขาวออกด้วย mix-blend-multiply) */}
+<div className="relative w-40 h-28 my-1 flex items-center justify-center filter drop-shadow-[0_0_20px_rgba(245,197,66,0.6)]">
+  <Image
+    src="/images/seasons/logo.png"
+    alt="Zodiac Arena Logo"
+    fill
+    sizes="(max-width: 768px) 160px, 180px"
+    className="object-contain mix-blend-multiply"
+    priority
+  />
+</div>
 
+            <span 
+              className="text-[9px] text-amber-300 uppercase tracking-widest font-black block mt-1"
+              style={{
+                textShadow: '0 2px 10px rgba(0,0,0,0.98), 0 0 20px rgba(0,0,0,0.95), 0 0 3px #000000',
+              }}
+            >
+              LIVE TOURNAMENT PHASE
+            </span>
           </div>
 
-          {/* Integrated Login Form */}
+          {/* Integrated Login Options */}
           <div className="bg-black/90 backdrop-blur-md rounded-xl p-3.5 border border-amber-400/60 space-y-2.5 shadow-2xl">
             <div className="text-center mb-0.5">
               <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider block">
@@ -299,15 +336,17 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* ปุ่มเปิด Riot ID Modal */}
             <button
-              onClick={handleRiotLogin}
+              onClick={() => setIsRiotModalOpen(true)}
               disabled={loading !== null}
               className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 px-3 text-[11px] font-bold tracking-wider text-white bg-rose-600 hover:bg-rose-500 transition-colors disabled:opacity-50 cursor-pointer shadow-[0_0_20px_rgba(244,63,94,0.5)]"
             >
-              {loading === 'riot' ? <Spinner /> : <RiotIcon />}
-              <span>{loading === 'riot' ? 'CONNECTING...' : 'LOGIN WITH RIOT'}</span>
+              <RiotIcon />
+              <span>LOGIN WITH RIOT ID</span>
             </button>
 
+            {/* ปุ่ม Google Auth ผ่าน Supabase */}
             <button
               onClick={handleGoogleLogin}
               disabled={loading !== null}
@@ -321,9 +360,9 @@ export default function LoginPage() {
 
         {/* CARD 4: FALL */}
         <div 
-          className="card-sway-4 relative h-[550px] rounded-2xl overflow-hidden border-2 border-orange-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-orange-400"
+          className="relative h-[550px] rounded-2xl overflow-hidden border-2 border-orange-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-orange-400"
           style={{
-            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(249,115,22,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(249,115,22,0.2)',
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(249,115,22,0.35)',
           }}
         >
           <div className="absolute inset-0 -z-10">
@@ -336,7 +375,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-orange-300 bg-orange-950/90 border border-orange-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(249,115,22,0.4)]">
+            <span className="text-[10px] font-black text-orange-300 bg-orange-950/90 border border-orange-400/60 px-2 py-0.5 rounded">
               SEASON 3 • JUL-SEP
             </span>
             <span className="text-[10px] text-orange-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-orange-400/40">
@@ -345,15 +384,10 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center my-auto w-full px-1">
-            <h2 
-              className="w-full text-center text-4xl sm:text-5xl font-black text-orange-400 tracking-tight leading-none drop-shadow-[0_0_25px_rgba(251,146,60,0.95)]"
-              style={{
-                textShadow: '0 0 12px #F97316, 0 0 24px #EA580C, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
-              }}
-            >
+            <h2 className="w-full text-center text-4xl sm:text-5xl font-black text-orange-400 tracking-tight leading-none">
               FALL
             </h2>
-            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black drop-shadow mt-1.5">UPCOMING CIRCUIT</p>
+            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black mt-1.5">UPCOMING CIRCUIT</p>
           </div>
 
           <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-orange-500/40 text-center shadow-lg">
@@ -364,9 +398,9 @@ export default function LoginPage() {
 
         {/* CARD 5: WINTER */}
         <div 
-          className="card-sway-5 relative h-[550px] rounded-2xl overflow-hidden border-2 border-cyan-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-cyan-400"
+          className="relative h-[550px] rounded-2xl overflow-hidden border-2 border-cyan-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-cyan-400"
           style={{
-            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(14,165,233,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(14,165,233,0.2)',
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(14,165,233,0.35)',
           }}
         >
           <div className="absolute inset-0 -z-10">
@@ -379,7 +413,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-cyan-300 bg-cyan-950/90 border border-cyan-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(14,165,233,0.4)]">
+            <span className="text-[10px] font-black text-cyan-300 bg-cyan-950/90 border border-cyan-400/60 px-2 py-0.5 rounded">
               SEASON 4 • OCT-DEC
             </span>
             <span className="text-[10px] text-cyan-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-cyan-400/40">
@@ -388,15 +422,10 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center my-auto w-full px-1">
-            <h2 
-              className="w-full text-center text-4xl sm:text-5xl font-black text-cyan-300 tracking-tight leading-none drop-shadow-[0_0_25px_rgba(103,232,249,0.95)]"
-              style={{
-                textShadow: '0 0 12px #06B6D4, 0 0 24px #0891B2, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
-              }}
-            >
+            <h2 className="w-full text-center text-4xl sm:text-5xl font-black text-cyan-300 tracking-tight leading-none">
               WINTER
             </h2>
-            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black drop-shadow mt-1.5">FINAL QUALIFIER</p>
+            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black mt-1.5">FINAL QUALIFIER</p>
           </div>
 
           <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-cyan-500/40 text-center shadow-lg">
@@ -404,10 +433,99 @@ export default function LoginPage() {
             <span className="text-xs font-black text-cyan-300">OCTOBER 2026</span>
           </div>
         </div>
-
       </div>
 
-      {/* Footer Terms Link */}
+      {/* MODAL: สำหรับกรอก Riot ID */}
+      {isRiotModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-[#0f141f] border border-gray-800 rounded-2xl p-6 shadow-2xl">
+            <button
+              onClick={() => setIsRiotModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center mb-5">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                Riot Identity Direct Sync
+              </div>
+              <h3 className="text-xl font-black uppercase text-white">
+                ระบุข้อมูล RIOT ID
+              </h3>
+              <p className="text-xs text-gray-400 mt-1">
+                กรอก Player Name และ Tagline เพื่อเข้าสู่สนามแข่ง
+              </p>
+            </div>
+
+            <form onSubmit={handleManualRiotSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
+                  Riot ID & Tagline
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="PlayerName"
+                    value={riotId}
+                    onChange={(e) => setRiotId(e.target.value)}
+                    className="flex-1 bg-[#182030] border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                    autoComplete="off"
+                  />
+                  <div className="w-28 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                      #
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="TH1"
+                      maxLength={5}
+                      value={tagline}
+                      onChange={(e) => setTagline(e.target.value.replace(/#/g, '').toUpperCase())}
+                      className="w-full bg-[#182030] border border-gray-700 rounded-xl pl-7 pr-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500 uppercase"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
+                  Region Server
+                </label>
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="w-full bg-[#182030] border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 cursor-pointer"
+                >
+                  <option value="ap">Asia-Pacific (AP)</option>
+                  <option value="na">North America (NA)</option>
+                  <option value="eu">Europe (EU)</option>
+                  <option value="kr">Korea (KR)</option>
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading === 'riot'}
+                className="w-full mt-2 bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 disabled:opacity-50"
+              >
+                {loading === 'riot' ? (
+                  <Spinner />
+                ) : (
+                  <>
+                    <span>ยืนยันเข้าสู่สนามแข่ง</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
       <footer className="relative z-10 text-center text-xs text-zinc-400">
         การเข้าสู่ระบบถือว่ายอมรับ{' '}
         <button
@@ -432,11 +550,8 @@ function CrownIcon() {
 
 function RiotIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12.02 2L2 6.64v10.72L12.02 22l10.02-4.64V6.64L12.02 2zm6.75 14.12l-6.75 3.12-6.75-3.12V7.88l6.75-3.12 6.75 3.12v8.24z"
-        fill="#FFFFFF"
-      />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-white">
+      <path d="M12.02 2L2 6.64v10.72L12.02 22l10.02-4.64V6.64L12.02 2zm6.75 14.12l-6.75 3.12-6.75-3.12V7.88l6.75-3.12 6.75 3.12v8.24z" />
     </svg>
   );
 }
@@ -444,22 +559,10 @@ function RiotIcon() {
 function GoogleIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
-      <path
-        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
-        fill="#4285F4"
-      />
-      <path
-        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
-        fill="#34A853"
-      />
-      <path
-        d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
-        fill="#EA4335"
-      />
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4" />
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853" />
+      <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335" />
     </svg>
   );
 }
@@ -468,11 +571,7 @@ function Spinner() {
   return (
     <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
   );
 }

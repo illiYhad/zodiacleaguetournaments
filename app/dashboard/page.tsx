@@ -3,20 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-type TournamentScope = 'daily' | 'weekly' | 'monthly';
+type TournamentScope = 'weekly' | 'monthly';
 
 export default function DashboardPage() {
-  const [scope, setScope] = useState<TournamentScope>('daily');
+  const [scope, setScope] = useState<TournamentScope>('weekly');
   const [activeTab, setActiveTab] = useState<'live' | 'recent'>('live');
   const [lastSync, setLastSync] = useState<string>('');
 
-  // โหลดค่า Scope จาก LocalStorage แบบ Asynchronous Microtask
+  // โหลดค่า Scope จาก LocalStorage
   useEffect(() => {
     let isMounted = true;
     const timer = setTimeout(() => {
       if (typeof window !== 'undefined' && isMounted) {
         const savedScope = localStorage.getItem('avela_tournament_scope') as TournamentScope;
-        if (savedScope && ['daily', 'weekly', 'monthly'].includes(savedScope)) {
+        if (savedScope && ['weekly', 'monthly'].includes(savedScope)) {
           setScope(savedScope);
         }
       }
@@ -36,7 +36,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Fallback Polling 30s ตามกฎ CTO (ป้องกัน Sync SetState ใน Effect)
+  // Fallback Polling 30s
   useEffect(() => {
     let isMounted = true;
     const initTimer = setTimeout(() => {
@@ -63,7 +63,12 @@ export default function DashboardPage() {
     { label: 'ACTIVE LOBBIES', value: '24', sub: '+4 in queue' },
     { label: 'PLAYERS ONLINE', value: '1,420', sub: 'High Traffic' },
     { label: 'MATCHES TODAY', value: '388', sub: 'Peak 45/hr' },
-    { label: 'PRIZE POOL', value: scope === 'daily' ? '$12,500' : scope === 'weekly' ? '$50,000' : '$250,000', sub: 'Updated Realtime', highlight: true },
+    { 
+      label: 'PRIZE POOL', 
+      value: scope === 'weekly' ? '$50,000' : '$250,000', 
+      sub: 'Updated Realtime', 
+      highlight: true 
+    },
   ];
 
   // แมตช์สด (Live Match Feed)
@@ -103,17 +108,6 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={() => handleScopeChange('daily')}
-            className={`cursor-pointer px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              scope === 'daily'
-                ? 'bg-[#00D4FF] text-black shadow-[0_0_12px_#00D4FF]'
-                : 'bg-[#07090E] text-gray-400 hover:text-white border border-gray-800'
-            }`}
-          >
-            ⚡ DAILY ARENA (3.3)
-          </button>
-          <button
-            type="button"
             onClick={() => handleScopeChange('weekly')}
             className={`cursor-pointer px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
               scope === 'weekly'
@@ -145,7 +139,7 @@ export default function DashboardPage() {
             <span className="text-[#00D4FF] text-xs tracking-widest uppercase font-bold">AVELAi TOURNAMENT NETWORK</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black tracking-wider text-white mt-1 uppercase">
-            {scope === 'daily' ? 'DAILY ARENA DASHBOARD' : scope === 'weekly' ? 'WEEKLY LEAGUE MATRIX' : 'MONTHLY WAR ROOM (NOC)'}
+            {scope === 'weekly' ? 'WEEKLY LEAGUE MATRIX' : 'MONTHLY WAR ROOM (NOC)'}
           </h1>
         </div>
         <div className="flex items-center gap-3 bg-[#12121A] border border-[#00D4FF]/30 px-4 py-2 rounded-lg text-xs">
@@ -157,69 +151,6 @@ export default function DashboardPage() {
           <span className="text-[11px] text-gray-400">SYNC: {lastSync}</span>
         </div>
       </header>
-
-      {/* ========================================================================= */}
-      {/* 3.3: DAILY ARENA (Bento Grid) */}
-      {/* ========================================================================= */}
-      {scope === 'daily' && (
-        <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-12 gap-4 z-10">
-          <div className="md:col-span-12 bg-[#12121A] border border-[#00D4FF]/30 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <span className="text-xs text-[#00D4FF] tracking-widest uppercase font-bold">DAILY TOURNAMENT SUMMARY</span>
-              <h2 className="text-2xl font-black text-white mt-1">QUICK ARENA TELEMETRY</h2>
-              <div className="text-xs text-gray-400 mt-1 flex items-center gap-3">
-                <span>Active Lobbies: <b>24</b></span>
-                <span>•</span>
-                <span>Online Players: <b>1,420</b></span>
-              </div>
-            </div>
-            <div className="bg-[#07090E] border border-[#C9A84C]/40 px-6 py-3 rounded-xl text-center">
-              <div className="text-[10px] text-gray-400">DAILY PRIZE POOL</div>
-              <div className="text-2xl font-black text-[#C9A84C]">$12,500</div>
-            </div>
-          </div>
-
-          <div className="md:col-span-6 bg-[#12121A] border border-[#00D4FF]/30 p-5 rounded-2xl space-y-3">
-            <div className="text-xs font-bold text-[#00D4FF] flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#00D4FF] animate-pulse" /> LIVE MATCH FEED
-            </div>
-            {liveMatches.slice(0, 2).map((m, idx) => (
-              <div key={idx} className="p-3 bg-[#07090E] border border-gray-800 rounded-xl flex justify-between items-center">
-                <div>
-                  <div className="text-xs font-bold text-white">{m.radiant} vs {m.dire}</div>
-                  <div className="text-[10px] text-gray-400 font-mono">⏱ {m.time}</div>
-                </div>
-                <div className="text-sm font-black text-[#00D4FF]">{m.radiantScore}:{m.direScore}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="md:col-span-6 bg-[#12121A] border border-[#00D4FF]/30 p-5 rounded-2xl space-y-3">
-            <div className="text-xs font-bold text-[#C9A84C]">RECENT DECRYPTED (DAILY)</div>
-            {recentMatches.slice(0, 2).map((m, idx) => (
-              <div key={idx} className="p-3 bg-[#07090E] border border-gray-800 rounded-xl flex justify-between items-center">
-                <div>
-                  <div className="text-xs font-bold text-white">{m.radiant} vs {m.dire}</div>
-                  <div className="text-[10px] text-gray-400">{m.time}</div>
-                </div>
-                <div className="text-xs font-bold text-green-400">{m.winner}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="md:col-span-12 bg-linear-to-r from-[#00D4FF]/10 via-[#12121A] to-[#C9A84C]/10 border border-[#00D4FF]/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <div className="text-xs font-bold text-[#00D4FF]">DAILY TOP 3 OPERATORS</div>
-              <div className="text-sm text-gray-300 mt-1 font-mono">
-                🥇 23savage (11.4k) &nbsp;|&nbsp; 🥈 Mikoto (11.2k) &nbsp;|&nbsp; 🥉 Jabz (10.9k)
-              </div>
-            </div>
-            <Link href="/leaderboard" className="px-5 py-2 bg-[#00D4FF] hover:bg-[#00D4FF]/80 text-black font-black text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(0,212,255,0.4)]">
-              VIEW FULL LEADERBOARD →
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* 3.2: WEEKLY LEAGUE (Tactical Matrix 4 Rows) */}

@@ -1,631 +1,462 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useState } from 'react';
-import TowerMapGrid from './TowerMapGrid';
 import {
-    AreaChart,
-    Area,
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    ReferenceLine,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts';
+import { Shield, Zap, Target, Flame, Bomb } from 'lucide-react';
 
-export interface AnalyticsPlayer {
-    playerSlot: number;
-    heroId: number;
-    heroName?: string;
-    playerName: string;
-    role?: string;
-    level?: number;
-    gpm?: number;
-    xpm?: number;
-    items?: (number | string)[];
-    item_0?: number;
-    item_1?: number;
-    item_2?: number;
-    item_3?: number;
-    item_4?: number;
-    item_5?: number;
-    item0?: number;
-    item1?: number;
-    item2?: number;
-    item3?: number;
-    item4?: number;
-    item5?: number;
-    ability_upgrades_arr?: number[];
+export type ValorantRole = 'Duelist' | 'Initiator' | 'Controller' | 'Sentinel';
+
+export interface ValorantPlayer {
+  playerSlot: number;
+  agentId: string;
+  agentName: string;
+  playerName: string;
+  role: ValorantRole;
+  team: 'attackers' | 'defenders';
+  acs: number; // Average Combat Score
+  kda: string; // e.g. "21/11/4"
+  adr: number; // Average Damage per Round
+  econRating?: number;
+  primaryWeapon?: string;
+  ultimateStatus?: 'READY' | 'CHARGING' | 'USED';
+  firstBloods?: number;
 }
 
-export interface AnalyticsMatchData {
-    duration?: number;
-    radiantGoldAdv?: number[];
-    radiantXpAdv?: number[];
-    towerStatusRadiant?: number;
-    towerStatusDire?: number;
-    barracksStatusRadiant?: number;
-    barracksStatusDire?: number;
+export interface ValorantMatchData {
+  matchId?: string;
+  mapName?: string;
+  totalRounds?: number;
+  attackerScore?: number;
+  defenderScore?: number;
+  duration?: number;
+  roundEconomyAdv?: number[]; // Positive = Attackers advantage, Negative = Defenders
+  attackSiteControl?: {
+    siteA: number; // Percentage 0-100
+    siteB: number;
+    siteC?: number;
+    plants: number;
+    defuses: number;
+  };
 }
 
 interface DeepAnalyticsProps {
-    matchData: AnalyticsMatchData;
-    players?: AnalyticsPlayer[];
-    heroIdToImg?: Record<number, string>;
-    itemIdToName?: Record<number, string>;
+  matchData?: ValorantMatchData;
+  players?: ValorantPlayer[];
 }
 
 interface AdvantageDataPoint {
-    minute: number;
-    gold: number;
-    xp: number;
+  round: number;
+  econLead: number;
+  combatAdvantage: number;
 }
 
-const POS_COLORS: Record<string, string> = {
-    'Pos 1': '#E8384F',
-    'Pos 2': '#2E9BFF',
-    'Pos 3': '#39FF6A',
-    'Pos 4': '#D63CE8',
-    'Pos 5': '#C8CDD4',
+const ROLE_COLORS: Record<ValorantRole, string> = {
+  Duelist: '#FF4655',    // Valorant Red
+  Initiator: '#00D4FF',  // Tactical Cyan
+  Controller: '#9B51E0', // Void Purple
+  Sentinel: '#39FF6A',   // Defensive Green
 };
 
-const HERO_DATA_MAP: Record<number, { name: string; shortName: string }> = {
-    1: { name: 'Anti-Mage', shortName: 'antimage' },
-    2: { name: 'Axe', shortName: 'axe' },
-    6: { name: 'Drow Ranger', shortName: 'drow_ranger' },
-    14: { name: 'Pudge', shortName: 'pudge' },
-    22: { name: 'Zeus', shortName: 'zuus' },
-    74: { name: 'Invoker', shortName: 'invoker' },
-    76: { name: 'Outworld Destroyer', shortName: 'obsidian_destroyer' },
-    84: { name: 'Ogre Magi', shortName: 'ogre_magi' },
-    90: { name: 'Keeper of the Light', shortName: 'keeper_of_the_light' },
-    93: { name: 'Slark', shortName: 'slark' },
-    96: { name: 'Centaur Warrunner', shortName: 'centaur' },
-    121: { name: 'Grimstroke', shortName: 'grimstroke' },
-    137: { name: 'Primal Beast', shortName: 'primal_beast' },
-};
+const DEFAULT_PLAYERS: ValorantPlayer[] = [
+  // ATTACKERS
+  { playerSlot: 0, agentId: 'jett', agentName: 'Jett', playerName: 'VIPER_99', role: 'Duelist', team: 'attackers', acs: 285, kda: '24/14/3', adr: 172, primaryWeapon: 'Vandal', ultimateStatus: 'READY', firstBloods: 5 },
+  { playerSlot: 1, agentId: 'sova', agentName: 'Sova', playerName: 'SHADOW_K', role: 'Initiator', team: 'attackers', acs: 230, kda: '18/12/9', adr: 145, primaryWeapon: 'Vandal', ultimateStatus: 'CHARGING', firstBloods: 2 },
+  { playerSlot: 2, agentId: 'omen', agentName: 'Omen', playerName: 'VALK_01', role: 'Controller', team: 'attackers', acs: 205, kda: '15/13/11', adr: 132, primaryWeapon: 'Phantom', ultimateStatus: 'READY', firstBloods: 1 },
+  { playerSlot: 3, agentId: 'killjoy', agentName: 'Killjoy', playerName: 'CYBER_X', role: 'Sentinel', team: 'attackers', acs: 195, kda: '14/11/5', adr: 128, primaryWeapon: 'Guardian', ultimateStatus: 'CHARGING', firstBloods: 1 },
+  { playerSlot: 4, agentId: 'reyna', agentName: 'Reyna', playerName: 'PHOENIX_ACE', role: 'Duelist', team: 'attackers', acs: 260, kda: '22/15/2', adr: 164, primaryWeapon: 'Vandal', ultimateStatus: 'USED', firstBloods: 4 },
+  
+  // DEFENDERS
+  { playerSlot: 5, agentId: 'raze', agentName: 'Raze', playerName: 'BLAST_PRO', role: 'Duelist', team: 'defenders', acs: 250, kda: '20/16/4', adr: 158, primaryWeapon: 'Vandal', ultimateStatus: 'READY', firstBloods: 3 },
+  { playerSlot: 6, agentId: 'fade', agentName: 'Fade', playerName: 'NIGHT_STALKER', role: 'Initiator', team: 'defenders', acs: 210, kda: '16/14/8', adr: 138, primaryWeapon: 'Phantom', ultimateStatus: 'CHARGING', firstBloods: 1 },
+  { playerSlot: 7, agentId: 'viper', agentName: 'Viper', playerName: 'TOXIC_WAVE', role: 'Controller', team: 'defenders', acs: 215, kda: '15/12/12', adr: 140, primaryWeapon: 'Phantom', ultimateStatus: 'READY', firstBloods: 0 },
+  { playerSlot: 8, agentId: 'cypher', agentName: 'Cypher', playerName: 'CAMERA_MAN', role: 'Sentinel', team: 'defenders', acs: 180, kda: '12/13/6', adr: 115, primaryWeapon: 'Spectre', ultimateStatus: 'CHARGING', firstBloods: 1 },
+  { playerSlot: 9, agentId: 'breach', agentName: 'Breach', playerName: 'QUAKE_HIT', role: 'Initiator', team: 'defenders', acs: 190, kda: '13/15/10', adr: 122, primaryWeapon: 'Odin', ultimateStatus: 'READY', firstBloods: 2 },
+];
 
-const HERO_ABILITY_DETAILS: Record<number, { key: string; name: string }[]> = {
-    1: [
-        { key: 'antimage_mana_break', name: 'Mana Break' },
-        { key: 'antimage_blink', name: 'Blink' },
-        { key: 'antimage_counterspell', name: 'Counterspell' },
-        { key: 'antimage_mana_void', name: 'Mana Void' },
-    ],
-    6: [
-        { key: 'drow_ranger_frost_arrows', name: 'Frost Arrows' },
-        { key: 'drow_ranger_multishot', name: 'Multishot' },
-        { key: 'drow_ranger_silence', name: 'Gust' },
-        { key: 'drow_ranger_marksmanship', name: 'Marksmanship' },
-    ],
-    14: [
-        { key: 'pudge_meat_hook', name: 'Meat Hook' },
-        { key: 'pudge_rot', name: 'Rot' },
-        { key: 'pudge_flesh_heap', name: 'Flesh Heap' },
-        { key: 'pudge_dismember', name: 'Dismember' },
-    ],
-    22: [
-        { key: 'zuus_arc_lightning', name: 'Arc Lightning' },
-        { key: 'zuus_lightning_bolt', name: 'Lightning Bolt' },
-        { key: 'zuus_heavenly_jump', name: 'Heavenly Jump' },
-        { key: 'zuus_thundergods_wrath', name: "Thundergod's Wrath" },
-    ],
-    76: [
-        { key: 'obsidian_destroyer_arcane_orb', name: 'Arcane Orb' },
-        { key: 'obsidian_destroyer_astral_imprisonment', name: 'Astral Imprisonment' },
-        { key: 'obsidian_destroyer_essence_flux', name: 'Essence Flux' },
-        { key: 'obsidian_destroyer_sanity_eclipse', name: "Sanity's Eclipse" },
-    ],
-    84: [
-        { key: 'ogre_magi_fireblast', name: 'Fireblast' },
-        { key: 'ogre_magi_ignite', name: 'Ignite' },
-        { key: 'ogre_magi_bloodlust', name: 'Bloodlust' },
-        { key: 'ogre_magi_multicast', name: 'Multicast' },
-    ],
-    90: [
-        { key: 'keeper_of_the_light_illuminate', name: 'Illuminate' },
-        { key: 'keeper_of_the_light_blinding_light', name: 'Blinding Light' },
-        { key: 'keeper_of_the_light_chakra_magic', name: 'Chakra Magic' },
-        { key: 'keeper_of_the_light_spirit_form', name: 'Spirit Form' },
-    ],
-    93: [
-        { key: 'slark_dark_pact', name: 'Dark Pact' },
-        { key: 'slark_pounce', name: 'Pounce' },
-        { key: 'slark_essence_shift', name: 'Essence Shift' },
-        { key: 'slark_shadow_dance', name: 'Shadow Dance' },
-    ],
-    96: [
-        { key: 'centaur_hoof_stomp', name: 'Hoof Stomp' },
-        { key: 'centaur_double_edge', name: 'Double Edge' },
-        { key: 'centaur_work_horse', name: 'Work Horse' },
-        { key: 'centaur_stampede', name: 'Stampede' },
-    ],
-    121: [
-        { key: 'grimstroke_dark_artistry', name: 'Stroke of Fate' },
-        { key: 'grimstroke_ink_creature', name: "Phantom's Embrace" },
-        { key: 'grimstroke_spirit_walk', name: 'Ink Swell' },
-        { key: 'grimstroke_soul_chain', name: 'Soulbind' },
-    ],
-    137: [
-        { key: 'primal_beast_onslaught', name: 'Onslaught' },
-        { key: 'primal_beast_trample', name: 'Trample' },
-        { key: 'primal_beast_uproar', name: 'Uproar' },
-        { key: 'primal_beast_pulverize', name: 'Pulverize' },
-    ],
-};
-
-type GraphMode = 'advantage' | 'gpm' | 'xpm';
+type GraphMode = 'economy' | 'acs' | 'adr';
 
 export default function DeepAnalyticsBoard({
-    matchData,
-    players = [],
-    heroIdToImg = {},
-    itemIdToName = {},
+  matchData = {},
+  players = DEFAULT_PLAYERS,
 }: DeepAnalyticsProps) {
-    const [graphMode, setGraphMode] = useState<GraphMode>('advantage');
-    const [teamFilter, setTeamFilter] = useState<'all' | 'radiant' | 'dire'>('all');
+  const [graphMode, setGraphMode] = useState<GraphMode>('economy');
+  const [teamFilter, setTeamFilter] = useState<'all' | 'attackers' | 'defenders'>('all');
 
-    const sortedPlayers = [...players].sort((a, b) => (a.playerSlot || 0) - (b.playerSlot || 0));
-    const radiantPlayers = sortedPlayers.filter((p) => (p.playerSlot || 0) < 128);
-    const direPlayers = sortedPlayers.filter((p) => (p.playerSlot || 0) >= 128);
+  const totalRounds = matchData.totalRounds || 24;
+  const attackerScore = matchData.attackerScore ?? 13;
+  const defenderScore = matchData.defenderScore ?? 11;
+  const mapName = matchData.mapName || 'ASCENT';
 
-    const durationMin = Math.max(10, Math.floor((matchData.duration || 2700) / 60));
+  const attackers = players.filter((p) => p.team === 'attackers');
+  const defenders = players.filter((p) => p.team === 'defenders');
 
-    const advantageData: AdvantageDataPoint[] = (matchData.radiantGoldAdv && matchData.radiantGoldAdv.length > 0)
-        ? matchData.radiantGoldAdv.map((gold: number, idx: number) => ({
-            minute: idx,
-            gold: gold,
-            xp: matchData.radiantXpAdv?.[idx] || 0,
-        }))
-        : Array.from({ length: durationMin }, (_, i) => {
-            const factor = -Math.sin(i / 5.5) * 6000 - (i * 180) + (i > 25 ? (i - 25) * 450 : 0);
-            return { minute: i, gold: Math.round(factor), xp: Math.round(factor * 1.05) };
-        });
+  // ข้อมูล Economy & Combat Timeline ตามรอบ (1 to totalRounds)
+  const roundAdvantageData: AdvantageDataPoint[] = Array.from({ length: totalRounds }, (_, i) => {
+    const roundNum = i + 1;
+    const wave = Math.sin(roundNum / 2) * 2500 + (roundNum % 4 === 0 ? 3000 : -1500);
+    return {
+      round: roundNum,
+      econLead: Math.round(wave),
+      combatAdvantage: Math.round(wave * 0.8),
+    };
+  });
 
-    const advMaxVal = Math.max(...advantageData.map((d) => Math.abs(d.gold)), 3000);
-    const dataMax = Math.max(...advantageData.map((i) => i.gold));
-    const dataMin = Math.min(...advantageData.map((i) => i.gold));
-    const off = dataMax <= 0 ? 0 : dataMin >= 0 ? 1 : dataMax / (dataMax - dataMin);
+  const maxEcon = Math.max(...roundAdvantageData.map((d) => Math.abs(d.econLead)), 4000);
+  const dataMax = Math.max(...roundAdvantageData.map((i) => i.econLead));
+  const dataMin = Math.min(...roundAdvantageData.map((i) => i.econLead));
+  const off = dataMax <= 0 ? 0 : dataMin >= 0 ? 1 : dataMax / (dataMax - dataMin);
 
-    const heroProgressionData = Array.from({ length: durationMin }, (_, m) => {
-        const row: Record<string, number> = { minute: m };
-        sortedPlayers.forEach((p) => {
-            const finalGpm = p.gpm || 450;
-            const finalXpm = p.xpm || 550;
-            const curve = Math.min(1, Math.pow((m + 1) / durationMin, 0.7));
-            const variance = Math.sin((m + p.playerSlot) * 0.8) * 35;
-            row[`gpm_${p.playerSlot}`] = Math.max(100, Math.round(finalGpm * curve + variance));
-            row[`xpm_${p.playerSlot}`] = Math.max(80, Math.round(finalXpm * curve + variance * 0.8));
-        });
-        return row;
+  // ข้อมูล Round-by-Round Trajectory ของผู้เล่น
+  const playerProgressionData = Array.from({ length: totalRounds }, (_, r) => {
+    const row: Record<string, number> = { round: r + 1 };
+    players.forEach((p) => {
+      const baseStat = graphMode === 'acs' ? p.acs : p.adr;
+      const progression = Math.min(1, (r + 1) / totalRounds);
+      const variance = Math.sin((r + p.playerSlot) * 1.2) * 25;
+      row[`player_${p.playerSlot}`] = Math.max(50, Math.round(baseStat * (0.8 + progression * 0.3) + variance));
     });
+    return row;
+  });
 
-    const getHeroImg = (heroId: number) => {
-        if (heroIdToImg[heroId]) {
-            const path = heroIdToImg[heroId];
-            return path.startsWith('http') ? path : `https://cdn.cloudflare.steamstatic.com${path}`;
-        }
-        const shortName = HERO_DATA_MAP[heroId]?.shortName;
-        if (shortName) {
-            return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${shortName}.png`;
-        }
-        return '';
-    };
+  const displayedPlayers = players.filter((p) => {
+    if (teamFilter === 'attackers') return p.team === 'attackers';
+    if (teamFilter === 'defenders') return p.team === 'defenders';
+    return true;
+  });
 
-    const getItemImg = (itemId: number | string) => {
-        if (!itemId || itemId === 0 || itemId === '0') return '';
-        const id = Number(itemId);
-        if (isNaN(id) || id <= 0) return '';
+  return (
+    <div className="space-y-8 pb-12 font-mono selection:bg-[#FF4655] selection:text-white">
+      {/* SECTION 1: MATCH TELEMETRY & TACTICAL MAP CONTROL */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* ECONOMY / COMBAT GRAPH (7 Cols) */}
+        <div className="lg:col-span-7 border border-[#00D4FF]/30 bg-[#0E1017]/90 p-5 rounded-2xl shadow-[0_0_25px_rgba(0,212,255,0.05)] flex flex-col justify-between backdrop-blur-md">
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-800 pb-3 mb-4">
+              <div className="flex items-center gap-2 text-xs font-black text-white">
+                <Zap className="w-4 h-4 text-[#00D4FF] animate-pulse" />
+                <span className="text-[#00D4FF] uppercase tracking-wider">
+                  {graphMode === 'economy' && 'ROUND ECONOMY BUY DELTA (CREDITS)'}
+                  {graphMode === 'acs' && 'AVERAGE COMBAT SCORE (ACS) TRAJECTORY'}
+                  {graphMode === 'adr' && 'AVERAGE DAMAGE PER ROUND (ADR) FLOW'}
+                </span>
+              </div>
 
-        const rawName = itemIdToName[id];
-        if (rawName) {
-            const cleanName = rawName.replace(/^item_/, '');
-            return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/${cleanName}.png`;
-        }
-
-        return `https://raw.githubusercontent.com/odota/dotaconstants/master/build/items/${id}.png`;
-    };
-
-    const renderHeroBuildMatrix = (p: AnalyticsPlayer) => {
-        const isRadiant = (p.playerSlot || 0) < 128;
-        const levels = Array.from({ length: 25 }, (_, i) => i + 1);
-        const posColor = POS_COLORS[p.role ?? ''] ?? '#C8CDD4';
-        const heroImg = getHeroImg(p.heroId);
-        const heroDisplayName = HERO_DATA_MAP[p.heroId]?.name || p.heroName || `Hero ${p.heroId}`;
-        const abilityDetails = HERO_ABILITY_DETAILS[p.heroId] || [];
-
-        const abilitySlots = [
-            {
-                slot: 'Q',
-                name: abilityDetails[0]?.name || 'Ability 1 (Q)',
-                img: abilityDetails[0]?.key ? `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/abilities/${abilityDetails[0].key}.png` : null,
-            },
-            {
-                slot: 'W',
-                name: abilityDetails[1]?.name || 'Ability 2 (W)',
-                img: abilityDetails[1]?.key ? `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/abilities/${abilityDetails[1].key}.png` : null,
-            },
-            {
-                slot: 'E',
-                name: abilityDetails[2]?.name || 'Ability 3 (E)',
-                img: abilityDetails[2]?.key ? `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/abilities/${abilityDetails[2].key}.png` : null,
-            },
-            {
-                slot: 'R',
-                name: abilityDetails[3]?.name || 'Ultimate (R)',
-                img: abilityDetails[3]?.key ? `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/abilities/${abilityDetails[3].key}.png` : null,
-            },
-            {
-                slot: 'T',
-                name: 'Talent Tree',
-                isTalent: true,
-                img: null,
-            },
-        ];
-
-        const buildMap: Record<number, number> = {};
-        const defaultBuild = [0, 1, 0, 1, 0, 3, 0, 1, 1, 4, 2, 3, 2, 2, 4, 2, 4, 3, 4, 4];
-        levels.forEach((lvl) => {
-            if (p.ability_upgrades_arr && p.ability_upgrades_arr[lvl - 1]) {
-                buildMap[lvl] = p.ability_upgrades_arr[lvl - 1] % 5;
-            } else if (lvl <= defaultBuild.length) {
-                buildMap[lvl] = defaultBuild[lvl - 1];
-            }
-        });
-
-        const heroItems = [
-            p.items?.[0] ?? p.item_0 ?? p.item0 ?? 0,
-            p.items?.[1] ?? p.item_1 ?? p.item1 ?? 0,
-            p.items?.[2] ?? p.item_2 ?? p.item2 ?? 0,
-            p.items?.[3] ?? p.item_3 ?? p.item3 ?? 0,
-            p.items?.[4] ?? p.item_4 ?? p.item4 ?? 0,
-            p.items?.[5] ?? p.item_5 ?? p.item5 ?? 0,
-        ];
-
-        return (
-            <div key={p.playerSlot} className="border border-neutral-800 bg-[#0E0E14] p-4 rounded-sm space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-800/80 pb-3">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-16 overflow-hidden border border-neutral-700 bg-neutral-900 shrink-0">
-                            {heroImg ? (
-                                <img
-                                    src={heroImg}
-                                    alt={heroDisplayName}
-                                    className="h-full w-full object-cover"
-                                    onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        const shortName = HERO_DATA_MAP[p.heroId]?.shortName;
-                                        if (shortName && !target.src.includes(shortName)) {
-                                            target.src = `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${shortName}.png`;
-                                        }
-                                    }}
-                                />
-                            ) : (
-                                <span className="flex h-full w-full items-center justify-center text-[10px] text-neutral-500">???</span>
-                            )}
-                        </div>
-                        <div>
-                            <div className="font-orbitron text-xs font-bold text-white flex items-center gap-2">
-                                <span className={isRadiant ? 'text-[#00D4FF]' : 'text-[#C9A84C]'}>{p.playerName}</span>
-                                <span className="text-neutral-300 font-semibold tracking-wide text-[11px]">— {heroDisplayName}</span>
-                                <span
-                                    className="rounded-xs px-1.5 py-0.5 text-[9px] font-bold"
-                                    style={{ color: posColor, border: `1px solid ${posColor}40`, background: `${posColor}15` }}
-                                >
-                                    {p.role || 'Pos —'}
-                                </span>
-                            </div>
-                            <div className="text-[10px] font-mono text-neutral-400">
-                                {isRadiant ? 'RADIANT' : 'DIRE'} LEVEL {p.level || 25}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 bg-[#07070C] p-1 border border-neutral-800">
-                        {heroItems.map((itemId, i) => {
-                            const itemUrl = getItemImg(itemId);
-                            const rawItemName = itemIdToName[Number(itemId)] || '';
-                            const cleanItemName = rawItemName.replace(/^item_/, '');
-
-                            return (
-                                <div
-                                    key={i}
-                                    title={cleanItemName || (itemId ? `Item #${itemId}` : 'Empty Slot')}
-                                    className="h-7 w-10 border border-neutral-800 bg-neutral-900 overflow-hidden flex items-center justify-center"
-                                >
-                                    {itemUrl ? (
-                                        <img
-                                            src={itemUrl}
-                                            alt="item"
-                                            className="h-full w-full object-cover"
-                                            onError={(e) => {
-                                                const target = e.target as HTMLImageElement;
-                                                if (cleanItemName && !target.src.includes('api.opendota.com')) {
-                                                    target.src = `https://api.opendota.com/apps/dota2/images/dota_react/items/${cleanItemName}.png`;
-                                                } else {
-                                                    target.style.display = 'none';
-                                                }
-                                            }}
-                                        />
-                                    ) : (
-                                        <span className="h-1 w-1 rounded-full bg-neutral-800" />
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <div className="min-w-[700px] select-none">
-                        <div className="grid grid-cols-[130px_repeat(25,1fr)] gap-1 pb-1 text-center font-mono text-[9px] text-neutral-500">
-                            <div className="text-left font-bold text-neutral-600">SKILL / LVL</div>
-                            {levels.map((lvl) => (
-                                <div key={lvl} className={`font-semibold ${[6, 12, 18, 10, 15, 20, 25].includes(lvl) ? 'text-[#00D4FF]' : ''}`}>
-                                    {lvl}
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="space-y-1">
-                            {abilitySlots.map((slot, sIdx) => (
-                                <div key={sIdx} className="grid grid-cols-[130px_repeat(25,1fr)] items-center gap-1">
-                                    <div
-                                        title={slot.name}
-                                        className="flex h-7 items-center gap-1.5 border border-neutral-800 bg-[#161622] px-1 overflow-hidden"
-                                    >
-                                        <div className="relative flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden border border-neutral-700 bg-neutral-900">
-                                            {slot.isTalent ? (
-                                                <span className="text-[10px]">🌳</span>
-                                            ) : slot.img ? (
-                                                <img
-                                                    src={slot.img}
-                                                    alt={slot.name}
-                                                    className="h-full w-full object-cover"
-                                                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                                                />
-                                            ) : (
-                                                <span className="text-[8px] font-bold text-neutral-400">{slot.slot}</span>
-                                            )}
-                                        </div>
-                                        <span className="truncate text-[9px] font-bold text-neutral-300">
-                                            {slot.name}
-                                        </span>
-                                    </div>
-
-                                    {levels.map((lvl) => {
-                                        const isLearned = buildMap[lvl] === sIdx;
-                                        return (
-                                            <div
-                                                key={lvl}
-                                                className={`flex h-7 items-center justify-center border text-[10px] font-bold transition-all ${isLearned
-                                                    ? slot.isTalent
-                                                        ? 'border-yellow-500/60 bg-yellow-500/20 text-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.2)]'
-                                                        : sIdx === 3
-                                                            ? 'border-[#E8384F]/80 bg-[#E8384F]/20 text-[#E8384F] shadow-[0_0_8px_rgba(232,56,79,0.3)]'
-                                                            : 'border-[#00D4FF]/60 bg-[#00D4FF]/20 text-[#00D4FF] shadow-[0_0_8px_rgba(0,212,255,0.2)]'
-                                                    : 'border-neutral-900 bg-[#0A0A10]/60 text-transparent'
-                                                    }`}
-                                            >
-                                                {isLearned ? lvl : ''}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    const displayedPlayers = sortedPlayers.filter((p) => {
-        if (teamFilter === 'radiant') return (p.playerSlot || 0) < 128;
-        if (teamFilter === 'dire') return (p.playerSlot || 0) >= 128;
-        return true;
-    });
-
-    return (
-        <div className="space-y-8 pb-12 font-mono">
-            {/* SECTION 1: ADVANTAGE & TRAJECTORY */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <div className="border border-[#00D4FF]/30 bg-[#111118] p-5 shadow-[0_0_25px_rgba(0,212,255,0.05)] flex flex-col justify-between">
-                    <div>
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-800 pb-3 mb-4">
-                            <div className="flex items-center gap-1.5 font-orbitron text-xs font-bold text-white">
-                                <span>📈</span>
-                                <span className="text-[#00D4FF]">
-                                    {graphMode === 'advantage' && 'TEAM ADVANTAGES PER MINUTE'}
-                                    {graphMode === 'gpm' && 'HERO GPM TRAJECTORY'}
-                                    {graphMode === 'xpm' && 'HERO XPM TRAJECTORY'}
-                                </span>
-                            </div>
-
-                            <div className="flex items-center rounded-xs bg-[#07070C] p-0.5 border border-neutral-800 text-[10px]">
-                                <button
-                                    onClick={() => setGraphMode('advantage')}
-                                    className={`px-2.5 py-1 rounded-xs transition-all cursor-pointer ${graphMode === 'advantage'
-                                        ? 'bg-[#00D4FF] text-black font-bold shadow-[0_0_10px_rgba(0,212,255,0.5)]'
-                                        : 'text-neutral-400 hover:text-white'
-                                        }`}
-                                >
-                                    Advantage
-                                </button>
-                                <button
-                                    onClick={() => setGraphMode('gpm')}
-                                    className={`px-2.5 py-1 rounded-xs transition-all cursor-pointer ${graphMode === 'gpm'
-                                        ? 'bg-[#E8384F] text-white font-bold shadow-[0_0_10px_rgba(232,56,79,0.5)]'
-                                        : 'text-neutral-400 hover:text-white'
-                                        }`}
-                                >
-                                    GPM
-                                </button>
-                                <button
-                                    onClick={() => setGraphMode('xpm')}
-                                    className={`px-2.5 py-1 rounded-xs transition-all cursor-pointer ${graphMode === 'xpm'
-                                        ? 'bg-[#2E9BFF] text-white font-bold shadow-[0_0_10px_rgba(46,155,255,0.5)]'
-                                        : 'text-neutral-400 hover:text-white'
-                                        }`}
-                                >
-                                    XPM
-                                </button>
-                            </div>
-                        </div>
-
-                        {graphMode !== 'advantage' && (
-                            <div className="flex items-center justify-between mb-3 text-[10px]">
-                                <span className="text-neutral-500">ROLE COLOR-CODED TRAJECTORY</span>
-                                <div className="flex gap-2">
-                                    {(['all', 'radiant', 'dire'] as const).map((team) => (
-                                        <button
-                                            key={team}
-                                            onClick={() => setTeamFilter(team)}
-                                            className={`px-2 py-0.5 uppercase rounded-xs border transition-all cursor-pointer ${teamFilter === team
-                                                ? team === 'radiant'
-                                                    ? 'border-[#00D4FF] bg-[#00D4FF]/20 text-[#00D4FF]'
-                                                    : team === 'dire'
-                                                        ? 'border-[#C9A84C] bg-[#C9A84C]/20 text-[#C9A84C]'
-                                                        : 'border-white bg-white/20 text-white'
-                                                : 'border-neutral-800 text-neutral-500 hover:border-neutral-700'
-                                                }`}
-                                        >
-                                            {team}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {graphMode === 'advantage' && (
-                            <div className="h-72 w-full text-[10px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={advantageData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="splitColorDotabuff" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset={off} stopColor="#A4B34C" stopOpacity={0.8} />
-                                                <stop offset={off} stopColor="#D23E33" stopOpacity={0.8} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#22222E" vertical={false} />
-                                        <XAxis dataKey="minute" stroke="#555" tick={{ fill: '#888' }} />
-                                        <YAxis
-                                            stroke="#555"
-                                            tick={{ fill: '#888' }}
-                                            domain={[-advMaxVal, advMaxVal]}
-                                            tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
-                                        />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#0D0D12', borderColor: '#333' }}
-                                            itemStyle={{ color: '#E0E0E0' }}
-                                            labelStyle={{ color: '#00D4FF' }}
-                                            formatter={(value: unknown) => [
-                                                Math.abs(Number(value || 0)).toLocaleString(),
-                                                Number(value || 0) >= 0 ? 'Radiant advantage' : 'Dire advantage',
-                                            ]}
-                                            labelFormatter={(label) => `Minute ${label}`}
-                                        />
-                                        <ReferenceLine y={0} stroke="#666" />
-                                        <Area
-                                            type="monotone"
-                                            dataKey="gold"
-                                            stroke={dataMax > 0 ? '#A4B34C' : '#D23E33'}
-                                            strokeWidth={2}
-                                            fill="url(#splitColorDotabuff)"
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </div>
-                        )}
-
-                        {graphMode !== 'advantage' && (
-                            <div className="h-72 w-full text-[10px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={heroProgressionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#22222E" vertical={false} />
-                                        <XAxis dataKey="minute" stroke="#555" tick={{ fill: '#888' }} />
-                                        <YAxis stroke="#555" tick={{ fill: '#888' }} domain={[0, 'auto']} />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#0D0D12', borderColor: '#333' }}
-                                            itemStyle={{ fontSize: '11px' }}
-                                            labelFormatter={(label) => `Minute ${label}`}
-                                        />
-                                        {displayedPlayers.map((p) => {
-                                            const color = POS_COLORS[p.role ?? ''] ?? '#C8CDD4';
-                                            const dataKey = graphMode === 'gpm' ? `gpm_${p.playerSlot}` : `xpm_${p.playerSlot}`;
-                                            return (
-                                                <Line
-                                                    key={p.playerSlot}
-                                                    type="monotone"
-                                                    dataKey={dataKey}
-                                                    name={`${p.playerName} (${p.role || 'Pos'})`}
-                                                    stroke={color}
-                                                    strokeWidth={2}
-                                                    dot={false}
-                                                    activeDot={{ r: 4 }}
-                                                />
-                                            );
-                                        })}
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap items-center justify-between border-t border-neutral-800/80 pt-2 text-[9px]">
-                        <span className="text-neutral-500 font-mono">ROLE COLOR MATRIX:</span>
-                        <div className="flex flex-wrap gap-2.5 font-bold">
-                            {Object.entries(POS_COLORS).map(([role, color]) => (
-                                <span key={role} className="flex items-center gap-1" style={{ color }}>
-                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }}></span>
-                                    {role}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <TowerMapGrid
-                    towerRadiant={matchData.towerStatusRadiant}
-                    towerDire={matchData.towerStatusDire}
-                    barracksRadiant={matchData.barracksStatusRadiant}
-                    barracksDire={matchData.barracksStatusDire}
-                    duration={matchData.duration}
-                />
+              {/* Mode Selectors */}
+              <div className="flex items-center rounded-lg bg-black/60 p-1 border border-neutral-800 text-[10px]">
+                <button
+                  onClick={() => setGraphMode('economy')}
+                  className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                    graphMode === 'economy'
+                      ? 'bg-[#00D4FF] text-black font-bold shadow-[0_0_10px_rgba(0,212,255,0.5)]'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  ECON BUY
+                </button>
+                <button
+                  onClick={() => setGraphMode('acs')}
+                  className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                    graphMode === 'acs'
+                      ? 'bg-[#FF4655] text-white font-bold shadow-[0_0_10px_rgba(255,70,85,0.5)]'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  ACS
+                </button>
+                <button
+                  onClick={() => setGraphMode('adr')}
+                  className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                    graphMode === 'adr'
+                      ? 'bg-[#39FF6A] text-black font-bold shadow-[0_0_10px_rgba(57,255,106,0.5)]'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  ADR
+                </button>
+              </div>
             </div>
 
-            {/* SECTION 2: SKILL BUILDS */}
-            <div className="border border-[#00D4FF]/30 bg-[#111118] p-5 shadow-[0_0_25px_rgba(0,212,255,0.05)]">
-                <div className="border-b border-neutral-800 pb-3 mb-6 flex items-center justify-between">
-                    <h3 className="font-orbitron text-xs font-bold uppercase tracking-wider text-[#00D4FF]">
-                        🧬 ABILITY & SKILL BUILDS (LEVEL 1–25)
-                    </h3>
-                    <span className="text-[10px] text-neutral-500 font-mono">TIMELINE UPGRADE SEQUENCE</span>
+            {/* Team Filter for ACS/ADR */}
+            {graphMode !== 'economy' && (
+              <div className="flex items-center justify-between mb-3 text-[10px]">
+                <span className="text-neutral-400 font-bold">TACTICAL ROSTER FILTER:</span>
+                <div className="flex gap-2">
+                  {(['all', 'attackers', 'defenders'] as const).map((team) => (
+                    <button
+                      key={team}
+                      onClick={() => setTeamFilter(team)}
+                      className={`px-2 py-0.5 uppercase rounded border transition-all cursor-pointer ${
+                        teamFilter === team
+                          ? team === 'attackers'
+                            ? 'border-[#FF4655] bg-[#FF4655]/20 text-[#FF4655]'
+                            : team === 'defenders'
+                            ? 'border-[#00D4FF] bg-[#00D4FF]/20 text-[#00D4FF]'
+                            : 'border-white bg-white/20 text-white'
+                          : 'border-neutral-800 text-neutral-500 hover:border-neutral-700'
+                      }`}
+                    >
+                      {team}
+                    </button>
+                  ))}
                 </div>
+              </div>
+            )}
 
-                <div className="space-y-6">
-                    <div className="space-y-4">
-                        <div className="text-xs font-orbitron font-bold text-[#00D4FF] border-l-2 border-[#00D4FF] pl-2">
-                            RADIANT BUILDS
-                        </div>
-                        <div className="space-y-3">
-                            {radiantPlayers.map((p) => renderHeroBuildMatrix(p))}
-                        </div>
-                    </div>
+            {/* Economy Area Chart */}
+            {graphMode === 'economy' && (
+              <div className="h-64 w-full text-[10px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={roundAdvantageData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="splitValEcon" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset={off} stopColor="#FF4655" stopOpacity={0.7} />
+                        <stop offset={off} stopColor="#00D4FF" stopOpacity={0.7} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#22222E" vertical={false} />
+                    <XAxis dataKey="round" stroke="#555" tick={{ fill: '#888' }} tickFormatter={(val) => `R${val}`} />
+                    <YAxis
+                      stroke="#555"
+                      tick={{ fill: '#888' }}
+                      domain={[-maxEcon, maxEcon]}
+                      tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#07090E', borderColor: '#333', borderRadius: '8px' }}
+                      itemStyle={{ color: '#E0E0E0' }}
+                      labelStyle={{ color: '#00D4FF', fontWeight: 'bold' }}
+                      formatter={(value: unknown) => [
+                        `${Math.abs(Number(value || 0)).toLocaleString()} Credits`,
+                        Number(value || 0) >= 0 ? 'Attackers Econ Lead' : 'Defenders Econ Lead',
+                      ]}
+                      labelFormatter={(label) => `Round ${label}`}
+                    />
+                    <ReferenceLine y={0} stroke="#666" />
+                    <Area
+                      type="monotone"
+                      dataKey="econLead"
+                      stroke={dataMax > 0 ? '#FF4655' : '#00D4FF'}
+                      strokeWidth={2}
+                      fill="url(#splitValEcon)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
 
-                    <div className="space-y-4 pt-4 border-t border-neutral-800">
-                        <div className="text-xs font-orbitron font-bold text-[#C9A84C] border-l-2 border-[#C9A84C] pl-2">
-                            DIRE BUILDS
-                        </div>
-                        <div className="space-y-3">
-                            {direPlayers.map((p) => renderHeroBuildMatrix(p))}
-                        </div>
-                    </div>
-                </div>
+            {/* ACS / ADR Line Chart */}
+            {graphMode !== 'economy' && (
+              <div className="h-64 w-full text-[10px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={playerProgressionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#22222E" vertical={false} />
+                    <XAxis dataKey="round" stroke="#555" tick={{ fill: '#888' }} tickFormatter={(val) => `R${val}`} />
+                    <YAxis stroke="#555" tick={{ fill: '#888' }} domain={[0, 'auto']} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#07090E', borderColor: '#333', borderRadius: '8px' }}
+                      itemStyle={{ fontSize: '11px' }}
+                      labelFormatter={(label) => `Round ${label}`}
+                    />
+                    {displayedPlayers.map((p) => {
+                      const color = ROLE_COLORS[p.role] || '#C8CDD4';
+                      return (
+                        <Line
+                          key={p.playerSlot}
+                          type="monotone"
+                          dataKey={`player_${p.playerSlot}`}
+                          name={`${p.playerName} (${p.agentName})`}
+                          stroke={color}
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4 }}
+                        />
+                      );
+                    })}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between border-t border-neutral-800/80 pt-2 text-[10px]">
+            <span className="text-neutral-500">AGENT CLASS ROLE:</span>
+            <div className="flex flex-wrap gap-3 font-bold">
+              {Object.entries(ROLE_COLORS).map(([role, color]) => (
+                <span key={role} className="flex items-center gap-1.5" style={{ color }}>
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }}></span>
+                  {role}
+                </span>
+              ))}
             </div>
+          </div>
         </div>
-    );
+
+        {/* VALORANT TACTICAL SITE CONTROL & MAP OVERVIEW (5 Cols - แทนที่ TowerMap เดิม) */}
+        <div className="lg:col-span-5 border border-[#FF4655]/30 bg-[#0E1017]/90 p-5 rounded-2xl shadow-[0_0_25px_rgba(255,70,85,0.05)] flex flex-col justify-between backdrop-blur-md">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-[#FF4655]" />
+                <span className="text-xs font-black text-white uppercase tracking-wider">
+                  MAP CONTROL & SITE TELEMETRY
+                </span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#FF4655]/20 text-[#FF4655] border border-[#FF4655]/40">
+                MAP: {mapName}
+              </span>
+            </div>
+
+            {/* Match Score Banner */}
+            <div className="p-3.5 rounded-xl bg-black/60 border border-neutral-800 flex items-center justify-around text-center">
+              <div>
+                <span className="text-[10px] font-bold text-[#FF4655] block">ATTACKERS</span>
+                <span className="text-2xl font-black text-white">{attackerScore}</span>
+              </div>
+              <div className="text-xs text-neutral-500 font-bold px-2">VS</div>
+              <div>
+                <span className="text-[10px] font-bold text-[#00D4FF] block">DEFENDERS</span>
+                <span className="text-2xl font-black text-white">{defenderScore}</span>
+              </div>
+            </div>
+
+            {/* Site Execution Control */}
+            <div className="space-y-2.5">
+              <div className="text-[11px] text-neutral-400 font-bold flex items-center justify-between">
+                <span>SITE A CONTROL RATE</span>
+                <span className="text-[#FF4655] font-bold">58% ATTACK SUCCESS</span>
+              </div>
+              <div className="w-full h-2 bg-neutral-900 rounded-full overflow-hidden flex">
+                <div className="bg-[#FF4655] h-full" style={{ width: '58%' }} />
+                <div className="bg-[#00D4FF] h-full" style={{ width: '42%' }} />
+              </div>
+
+              <div className="text-[11px] text-neutral-400 font-bold flex items-center justify-between pt-1">
+                <span>SITE B CONTROL RATE</span>
+                <span className="text-[#00D4FF] font-bold">64% DEFENSE RETAKE</span>
+              </div>
+              <div className="w-full h-2 bg-neutral-900 rounded-full overflow-hidden flex">
+                <div className="bg-[#FF4655] h-full" style={{ width: '36%' }} />
+                <div className="bg-[#00D4FF] h-full" style={{ width: '64%' }} />
+              </div>
+            </div>
+
+            {/* Spike Telemetry Metric */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="p-3 rounded-xl bg-black/40 border border-neutral-800 flex items-center gap-3">
+                <Bomb className="w-5 h-5 text-[#FF4655]" />
+                <div>
+                  <div className="text-[9px] text-neutral-400">SPIKE PLANTS</div>
+                  <div className="text-sm font-black text-white">16 TOTAL</div>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-black/40 border border-neutral-800 flex items-center gap-3">
+                <Shield className="w-5 h-5 text-[#00D4FF]" />
+                <div>
+                  <div className="text-[9px] text-neutral-400">DEFUSES / RETAKES</div>
+                  <div className="text-sm font-black text-white">7 DEFUSED</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[10px] text-neutral-500 text-center pt-3 border-t border-neutral-800/80">
+            RECORDED ON VALORANT COMPETITIVE RULES (MR12)
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 2: VALORANT ROSTER LOADOUT & COMBAT STATS */}
+      <div className="border border-neutral-800 bg-[#0E1017]/90 p-5 rounded-2xl shadow-[0_0_25px_rgba(0,0,0,0.5)]">
+        <div className="border-b border-neutral-800 pb-3 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Flame className="w-4 h-4 text-[#FF4655]" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-white">
+              TACTICAL ROSTER PERFORMANCE & WEAPON LOADOUTS
+            </h3>
+          </div>
+          <span className="text-[10px] text-neutral-400 font-mono">10 ATHLETES ENGAGED</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* ATTACKERS ROSTER */}
+          <div className="space-y-3">
+            <div className="text-xs font-black text-[#FF4655] border-l-2 border-[#FF4655] pl-2 flex items-center justify-between">
+              <span>ATTACKERS SQUAD</span>
+              <span className="text-[10px] text-neutral-400 font-mono">SCORE: {attackerScore}</span>
+            </div>
+            <div className="space-y-2">
+              {attackers.map((p) => renderPlayerValorantCard(p))}
+            </div>
+          </div>
+
+          {/* DEFENDERS ROSTER */}
+          <div className="space-y-3">
+            <div className="text-xs font-black text-[#00D4FF] border-l-2 border-[#00D4FF] pl-2 flex items-center justify-between">
+              <span>DEFENDERS SQUAD</span>
+              <span className="text-[10px] text-neutral-400 font-mono">SCORE: {defenderScore}</span>
+            </div>
+            <div className="space-y-2">
+              {defenders.map((p) => renderPlayerValorantCard(p))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Sub-Component: การ์ดผู้เล่น Valorant แต่ละคน
+function renderPlayerValorantCard(p: ValorantPlayer) {
+  const roleColor = ROLE_COLORS[p.role] || '#C8CDD4';
+
+  return (
+    <div
+      key={p.playerSlot}
+      className="p-3 rounded-xl bg-black/60 border border-neutral-800 hover:border-neutral-700 transition-colors flex items-center justify-between gap-3 text-xs"
+    >
+      <div className="flex items-center gap-3">
+        {/* Agent Badge */}
+        <div className="w-10 h-10 rounded-lg bg-neutral-900 border border-neutral-700 flex flex-col items-center justify-center font-black text-[10px] text-white shrink-0">
+          <span className="text-[9px] text-[#FF4655] font-black">{p.agentName.substring(0, 3).toUpperCase()}</span>
+          <span className="text-[8px] text-neutral-400 font-normal">{p.agentName}</span>
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-white text-xs">{p.playerName}</span>
+            <span
+              className="text-[9px] font-bold px-1.5 py-0.2 rounded"
+              style={{ color: roleColor, border: `1px solid ${roleColor}40`, background: `${roleColor}15` }}
+            >
+              {p.role}
+            </span>
+          </div>
+          <div className="text-[10px] text-neutral-400 font-mono mt-0.5 flex items-center gap-2">
+            <span>Gun: <b className="text-zinc-200">{p.primaryWeapon || 'Vandal'}</b></span>
+            <span>•</span>
+            <span>FB: <b className="text-[#FF4655]">{p.firstBloods ?? 0}</b></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Combat Metrics */}
+      <div className="text-right font-mono">
+        <div className="text-xs font-black text-white">{p.kda}</div>
+        <div className="text-[10px] text-neutral-400">
+          ACS: <span className="text-[#00D4FF] font-bold">{p.acs}</span> | ADR: <span className="text-amber-400">{p.adr}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
