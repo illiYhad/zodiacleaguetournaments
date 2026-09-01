@@ -1,283 +1,478 @@
+// app/page.tsx หรือ app/login/page.tsx
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import type { Provider } from '@supabase/supabase-js';
+
+// ข้อมูล 5 ผู้เล่นแชมป์ Spring พร้อมสถิติ Valorant Matrix
+const SPRING_CHAMPIONS = {
+  teamName: 'ZODIAC APEX',
+  record: '64W - 41L (61% WR)',
+  players: [
+    { name: 'VIPER_99', role: 'Duelist', agent: 'Jett', kda: '1.42', adr: 172.4, hs: '34%' },
+    { name: 'SHADOW_K', role: 'Initiator', agent: 'Sova', kda: '1.28', adr: 154.2, hs: '28%' },
+    { name: 'PHOENIX_A', role: 'Duelist', agent: 'Reyna', kda: '1.35', adr: 168.0, hs: '36%' },
+    { name: 'VALK_01', role: 'Controller', agent: 'Omen', kda: '1.15', adr: 138.5, hs: '24%' },
+    { name: 'CYBER_X', role: 'Sentinel', agent: 'Killjoy', kda: '1.18', adr: 142.1, hs: '26%' },
+  ],
+};
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState<'google' | 'riot' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   const supabase = createClient();
 
-  const handleSteamLogin = () => {
-    // TODO: implement Steam OpenID login
-    console.log('Steam login');
-  };
-
-  const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
+  async function handleGoogleLogin() {
+    setLoading('google');
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-  };
+    if (error) {
+      setError(error.message);
+      setLoading(null);
+    }
+  }
 
-  const handleEmailLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: implement email/password login via Supabase
-    console.log('Email login', { email, password });
-  };
+  async function handleRiotLogin() {
+    setLoading('riot');
+    setError(null);
+    const riotProvider = 'riot' as unknown as Provider;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: riotProvider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      setError(error.message);
+      setLoading(null);
+    }
+  }
 
   return (
-    <main className="min-h-screen bg-[#0A0A0F] flex items-center justify-center p-6 relative overflow-hidden font-mono">
-      {/* Grid background */}
+    <main className="min-h-screen bg-[#050508] text-white flex flex-col items-center justify-center p-3 lg:p-6 font-mono relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
+      {/* Background Faceoff Image & Cyber Grid */}
+      <div className="fixed inset-0 -z-20 opacity-30 pointer-events-none">
+        <Image
+          src="/images/seasons/BG.png"
+          alt="Zodiac Arena Faceoff"
+          fill
+          sizes="100vw"
+          className="object-cover"
+          priority
+        />
+      </div>
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="pointer-events-none fixed inset-0 opacity-25 -z-10"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px)
+            linear-gradient(rgba(245, 197, 66, 0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 212, 255, 0.08) 1px, transparent 1px)
           `,
           backgroundSize: '40px 40px',
         }}
       />
+      <div className="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-b from-amber-500/15 via-rose-500/5 to-transparent rounded-full blur-[140px]" />
 
-      {/* Gold glow top-right */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          width: 400,
-          height: 400,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%)',
-          top: -100,
-          right: -100,
-        }}
-      />
-
-      {/* Card */}
-      <div
-        className="relative z-10 w-full max-w-100 rounded-xl p-10"
-        style={{
-          background: '#12121A',
-          border: '0.5px solid rgba(201,168,76,0.25)',
-        }}
-      >
-        {/* Top gold line */}
-        <div
-          className="absolute top-0 left-0 right-0 h-px rounded-t-xl"
-          style={{
-            background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.5), transparent)',
-          }}
-        />
-
-        {/* Logo */}
-        <div className="text-center mb-7">
-          <h1
-            className="text-[26px] font-bold tracking-[4px]"
-            style={{ fontFamily: "'Orbitron', monospace", color: '#E8E8F0' }}
-          >
-            AVEL<span style={{ color: '#C9A84C' }}>A</span>i
-          </h1>
-          <p
-            className="text-[8px] tracking-[3px] mt-1"
-            style={{ fontFamily: "'JetBrains Mono', monospace", color: 'rgba(0,212,255,0.6)' }}
-          >
-            — PRECISION IS FREEDOM —
-          </p>
+      {/* Header Banner */}
+      <header className="relative z-10 text-center mb-6 max-w-3xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-300 text-[11px] font-bold tracking-widest uppercase mb-2 shadow-[0_0_15px_rgba(245,197,66,0.3)]">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          VALORANT YEAR LEAGUE 2026
         </div>
-
-        {/* Status */}
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <span
-            className="w-1.5 h-1.5 rounded-full"
-            style={{
-              background: '#00D4FF',
-              animation: 'pulse 2s infinite',
-            }}
-          />
-          <span
-            className="text-[9px] tracking-[2px]"
-            style={{ fontFamily: "'JetBrains Mono', monospace", color: 'rgba(0,212,255,0.45)' }}
-          >
-            AVE ONLINE // ARENA READY
-          </span>
-        </div>
-
-        {/* Divider */}
-        <div
-          className="mb-6 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.2), transparent)' }}
-        />
-
-        {/* Steam button */}
-        <button
-          onClick={handleSteamLogin}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-md mb-3 transition-all cursor-pointer"
-          style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '0.5px solid rgba(201,168,76,0.3)',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(201,168,76,0.6)')}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(201,168,76,0.3)')}
+        <h1
+          className="text-3xl md:text-5xl font-black tracking-wider uppercase drop-shadow-[0_0_25px_rgba(245,197,66,0.5)]"
+          style={{ fontFamily: "'Orbitron', sans-serif" }}
         >
-          <SteamIcon />
-          <span
-            className="flex-1 text-center text-[13px] font-medium mr-5"
-            style={{ fontFamily: "'Inter', sans-serif", color: '#E8E8F0' }}
-          >
-            Continue with Steam
-          </span>
-        </button>
-
-        {/* Google button */}
-        <button
-          onClick={handleGoogleLogin}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-md mb-5 transition-all cursor-pointer"
-          style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '0.5px solid rgba(255,255,255,0.1)',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(201,168,76,0.35)')}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
-        >
-          <GoogleIcon />
-          <span
-            className="flex-1 text-center text-[13px] font-medium mr-5"
-            style={{ fontFamily: "'Inter', sans-serif", color: '#E8E8F0' }}
-          >
-            Continue with Google
-          </span>
-        </button>
-
-        {/* OR divider */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.12)' }} />
-          <span
-            className="text-[9px] tracking-[2px]"
-            style={{ fontFamily: "'JetBrains Mono', monospace", color: 'rgba(232,232,240,0.25)' }}
-          >
-            OR
-          </span>
-          <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.12)' }} />
-        </div>
-
-        {/* Email form */}
-        <form onSubmit={handleEmailLogin} className="space-y-4">
-          <div>
-            <label
-              className="block text-[9px] tracking-[2px] mb-1.5"
-              style={{ fontFamily: "'JetBrains Mono', monospace", color: 'rgba(0,212,255,0.5)' }}
-            >
-              {'// IDENTIFIER'}
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="player@avelai.gg"
-              className="w-full px-4 py-2.5 rounded-md text-[13px] outline-none transition-all"
-              style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '0.5px solid rgba(201,168,76,0.15)',
-                color: '#E8E8F0',
-                fontFamily: "'Inter', sans-serif",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(201,168,76,0.15)')}
-            />
-          </div>
-
-          <div>
-            <label
-              className="block text-[9px] tracking-[2px] mb-1.5"
-              style={{ fontFamily: "'JetBrains Mono', monospace", color: 'rgba(0,212,255,0.5)' }}
-            >
-              {'// ACCESS KEY'}
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              className="w-full px-4 py-2.5 rounded-md text-[13px] outline-none transition-all"
-              style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '0.5px solid rgba(201,168,76,0.15)',
-                color: '#E8E8F0',
-                fontFamily: "'Inter', sans-serif",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(201,168,76,0.15)')}
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <a
-              href="/forgot-password"
-              className="text-[11px]"
-              style={{ color: 'rgba(201,168,76,0.6)', fontFamily: "'Inter', sans-serif" }}
-            >
-              Forgot password?
-            </a>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-3 rounded-md text-[11px] font-bold tracking-[3px] transition-opacity hover:opacity-85 cursor-pointer"
-            style={{
-              background: '#C9A84C',
-              color: '#0A0A0F',
-              fontFamily: "'Orbitron', monospace",
-            }}
-          >
-            ENTER ARENA
-          </button>
-        </form>
-
-        {/* Register link */}
-        <p
-          className="text-center text-[12px] mt-6"
-          style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(232,232,240,0.25)' }}
-        >
-          New recruit?{' '}
-          <a href="/register" style={{ color: '#C9A84C' }}>
-            Register here
-          </a>
+          ZODIAC <span className="text-[#F5C542]">ARENA</span>
+        </h1>
+        <p className="text-xs md:text-sm text-zinc-300 mt-1 tracking-widest font-semibold drop-shadow">
+          1 ปี = 4 SEASONS • แข่งขันต่อเนื่องตลอดทั้งปี • สะสมคะแนนลุ้นแชมป์ประจำปี
         </p>
+      </header>
+
+      {/* 5-Card Grid Showcase with 3D Depth & Wind-Sway Physics */}
+      <div className="relative z-10 w-full max-w-[1520px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-5 items-center mb-6">
+        
+        {/* CARD 1: ZODIAC LEAGUE */}
+        <div 
+          className="card-sway-1 relative h-[550px] rounded-2xl overflow-hidden border-2 border-purple-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-purple-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(168,85,247,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(168,85,247,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/zodiacT1Y.jpg"
+              alt="Zodiac Tournament Grand Finals"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+              priority
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-purple-200 bg-purple-950/90 border border-purple-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(168,85,247,0.4)]">
+              ANNUAL FINALS
+            </span>
+            <span className="text-[10px] text-amber-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-amber-400/40">
+              TOP 12 CLASH
+            </span>
+          </div>
+          
+          <div className="text-center my-auto w-full px-1">
+            <span className="text-[10px] text-amber-300 tracking-[0.25em] uppercase font-black block mb-1 drop-shadow-[0_0_8px_rgba(245,197,66,0.8)]">
+              GRAND CHAMPIONSHIP
+            </span>
+            <h2 
+              className="w-full text-center text-3xl sm:text-4xl lg:text-[2.6rem] font-black text-white tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(168,85,247,0.95)]"
+              style={{ fontFamily: "'Orbitron', sans-serif" }}
+            >
+              ZODIAC <span className="text-purple-400">LEAGUE</span>
+            </h2>
+            <p className="text-[11px] text-zinc-200 mt-2 font-bold drop-shadow">มหาศึกรวม 12 ราศีส่งท้ายปี</p>
+          </div>
+
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-purple-500/40 text-center shadow-lg">
+            <span className="text-[9px] text-zinc-300 block">TOTAL PRIZE POOL</span>
+            <span className="text-sm font-black text-amber-400 tracking-wider drop-shadow">ANNUAL GLORY</span>
+          </div>
+        </div>
+
+        {/* CARD 2: SPRING (CLEAR CONTRAST HUD PLATE) */}
+        <div 
+          className="card-sway-2 relative h-[550px] rounded-2xl overflow-hidden border-2 border-emerald-500/80 bg-zinc-950/50 flex flex-col justify-between p-3.5 transition-transform duration-300 hover:scale-[1.03] hover:border-emerald-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(34,197,94,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Spring.jpg"
+              alt="Spring Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-emerald-300 bg-emerald-950/90 border border-emerald-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(34,197,94,0.4)]">
+              SEASON 1 • JAN-MAR
+            </span>
+            <div className="flex items-center gap-1 text-amber-300 bg-black/70 px-2 py-0.5 rounded border border-amber-400/40 shadow-sm">
+              <CrownIcon />
+              <span className="text-[10px] font-black tracking-wider text-amber-400">CHAMPION</span>
+            </div>
+          </div>
+
+          {/* SPRING TITLE PLATE: ตัดแสงจ้าด้วย Dark Plate ชัดเจน 100% */}
+          <div className="my-auto w-full rounded-2xl py-3.5 px-3 bg-black/80 backdrop-blur-md border border-emerald-500/50 shadow-[0_0_25px_rgba(16,185,129,0.35)] text-center">
+            <h2 
+              className="w-full text-center text-4xl sm:text-5xl font-black text-emerald-300 tracking-tight leading-none"
+              style={{
+                textShadow: '0 0 15px #10B981, 0 0 30px #059669',
+              }}
+            >
+              SPRING
+            </h2>
+            <p className="text-[10px] text-zinc-300 uppercase tracking-widest font-black mt-1.5 drop-shadow">
+              CONCLUDED • {SPRING_CHAMPIONS.record}
+            </p>
+          </div>
+
+          {/* Champion Roster Matrix */}
+          <div className="bg-black/90 backdrop-blur-md rounded-xl p-2.5 border border-emerald-500/40 shadow-xl space-y-1.5">
+            <div className="text-[10px] font-black text-amber-400 flex items-center justify-between border-b border-white/10 pb-1">
+              <span>🏆 {SPRING_CHAMPIONS.teamName}</span>
+              <span className="text-[9px] text-emerald-400 bg-emerald-950/80 px-1.5 rounded border border-emerald-500/30">
+                1st SEED
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              {SPRING_CHAMPIONS.players.map((p, idx) => (
+                <div
+                  key={p.name}
+                  className="flex items-center justify-between bg-white/[0.04] hover:bg-white/[0.08] px-2 py-1 rounded border border-white/5 transition-colors text-[10px]"
+                >
+                  <div className="flex items-center gap-1.5 truncate max-w-[125px]">
+                    <span className="font-bold text-emerald-400 text-[9px]">#{idx + 1}</span>
+                    <span className="font-black text-zinc-100 truncate">{p.name}</span>
+                    <span className="text-[8px] text-zinc-400 bg-zinc-800/80 px-1 rounded">
+                      {p.agent}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-[9px]">
+                    <span className="text-zinc-300 font-bold">
+                      <span className="text-zinc-500 text-[8px]">K/D </span>
+                      {p.kda}
+                    </span>
+                    <span className="text-amber-300 font-bold">
+                      <span className="text-zinc-500 text-[8px]">ADR </span>
+                      {p.adr}
+                    </span>
+                    <span className="text-emerald-400 font-bold">
+                      {p.hs}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* CARD 3: SUMMER (SUMMER OUTSIDE + ONLY NOW IN RED HUD BOX) */}
+        <div 
+          className="card-sway-3 relative h-[600px] lg:-mt-5 rounded-2xl overflow-hidden border-[3px] border-amber-400 bg-zinc-950/40 flex flex-col justify-between p-4 z-20 transition-transform duration-300 hover:scale-[1.04]"
+          style={{
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.95), 0 0 45px rgba(245,197,66,0.65), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 20px rgba(245,197,66,0.25)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Summer.jpg"
+              alt="Summer Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+              priority
+            />
+          </div>
+          
+          {/* Header Bar */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-amber-300 bg-amber-950/90 border border-amber-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(245,197,66,0.5)]">
+              SEASON 2 • APR-JUN
+            </span>
+            <span className="text-[10px] font-black text-rose-400 bg-rose-950/80 border border-rose-500/50 px-2 py-0.5 rounded">
+              CIRCUIT ACTIVE
+            </span>
+          </div>
+
+          {/* ZONE: SUMMER ลอยนอกกรอบ + ในกรอบเหลือเฉพาะ NOW */}
+          <div className="my-auto w-full flex flex-col items-center">
+            
+            {/* 1. SUMMER ลอยเด่นนอกกรอบ */}
+            <h2
+              className="w-full text-center text-4xl sm:text-5xl font-black tracking-tight leading-none text-[#FFF4CC] mb-2.5"
+              style={{
+                textShadow: '0 0 12px #F5C542, 0 0 25px #E67E22, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+              }}
+            >
+              SUMMER
+            </h2>
+
+            {/* 2. กรอบสีดำขอบแดงนีออน ครอบเฉพาะ NOW */}
+            <div className="w-full rounded-2xl py-3 px-4 bg-black/85 backdrop-blur-md border-2 border-rose-600 shadow-[0_0_35px_rgba(225,29,72,0.6)] text-center">
+              <span
+                className="text-4xl sm:text-5xl font-black tracking-widest text-[#FF1A4B] block animate-[pulse_2.5s_ease-in-out_infinite]"
+                style={{
+                  fontFamily: "'Orbitron', sans-serif",
+                  textShadow: '0 0 15px #FF1A4B, 0 0 30px #E11D48, 0 0 50px #BE123C, 0 0 70px #881337',
+                }}
+              >
+                NOW
+              </span>
+              <span className="text-[9px] text-rose-300 uppercase tracking-widest font-black block mt-1 drop-shadow">
+                LIVE TOURNAMENT PHASE
+              </span>
+            </div>
+
+          </div>
+
+          {/* Integrated Login Form */}
+          <div className="bg-black/90 backdrop-blur-md rounded-xl p-3.5 border border-amber-400/60 space-y-2.5 shadow-2xl">
+            <div className="text-center mb-0.5">
+              <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider block">
+                ATHLETE ACCESS
+              </span>
+              <span className="text-[9px] text-zinc-400">เข้าสู่ระบบเพื่อสะสมคะแนน ZP</span>
+            </div>
+
+            {error && (
+              <div className="rounded p-1.5 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 text-center">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleRiotLogin}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 px-3 text-[11px] font-bold tracking-wider text-white bg-rose-600 hover:bg-rose-500 transition-colors disabled:opacity-50 cursor-pointer shadow-[0_0_20px_rgba(244,63,94,0.5)]"
+            >
+              {loading === 'riot' ? <Spinner /> : <RiotIcon />}
+              <span>{loading === 'riot' ? 'CONNECTING...' : 'LOGIN WITH RIOT'}</span>
+            </button>
+
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2 px-3 text-[10px] font-semibold tracking-wider text-zinc-200 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {loading === 'google' ? <Spinner /> : <GoogleIcon />}
+              <span>GOOGLE LOGIN</span>
+            </button>
+          </div>
+        </div>
+
+        {/* CARD 4: FALL */}
+        <div 
+          className="card-sway-4 relative h-[550px] rounded-2xl overflow-hidden border-2 border-orange-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-orange-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(249,115,22,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(249,115,22,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Fall.jpg"
+              alt="Fall Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-orange-300 bg-orange-950/90 border border-orange-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(249,115,22,0.4)]">
+              SEASON 3 • JUL-SEP
+            </span>
+            <span className="text-[10px] text-orange-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-orange-400/40">
+              NEXT SEASON
+            </span>
+          </div>
+
+          <div className="text-center my-auto w-full px-1">
+            <h2 
+              className="w-full text-center text-4xl sm:text-5xl font-black text-orange-400 tracking-tight leading-none drop-shadow-[0_0_25px_rgba(251,146,60,0.95)]"
+              style={{
+                textShadow: '0 0 12px #F97316, 0 0 24px #EA580C, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+              }}
+            >
+              FALL
+            </h2>
+            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black drop-shadow mt-1.5">UPCOMING CIRCUIT</p>
+          </div>
+
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-orange-500/40 text-center shadow-lg">
+            <span className="text-[10px] text-zinc-300 block mb-1">REGISTRATION OPENS</span>
+            <span className="text-xs font-black text-orange-400">JULY 2026</span>
+          </div>
+        </div>
+
+        {/* CARD 5: WINTER */}
+        <div 
+          className="card-sway-5 relative h-[550px] rounded-2xl overflow-hidden border-2 border-cyan-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-cyan-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(14,165,233,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(14,165,233,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Winter.jpg"
+              alt="Winter Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-cyan-300 bg-cyan-950/90 border border-cyan-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(14,165,233,0.4)]">
+              SEASON 4 • OCT-DEC
+            </span>
+            <span className="text-[10px] text-cyan-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-cyan-400/40">
+              LOCKED
+            </span>
+          </div>
+
+          <div className="text-center my-auto w-full px-1">
+            <h2 
+              className="w-full text-center text-4xl sm:text-5xl font-black text-cyan-300 tracking-tight leading-none drop-shadow-[0_0_25px_rgba(103,232,249,0.95)]"
+              style={{
+                textShadow: '0 0 12px #06B6D4, 0 0 24px #0891B2, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+              }}
+            >
+              WINTER
+            </h2>
+            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black drop-shadow mt-1.5">FINAL QUALIFIER</p>
+          </div>
+
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-cyan-500/40 text-center shadow-lg">
+            <span className="text-[10px] text-zinc-300 block mb-1">LAST CHANCE POINTS</span>
+            <span className="text-xs font-black text-cyan-300">OCTOBER 2026</span>
+          </div>
+        </div>
+
       </div>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-        input::placeholder { color: rgba(232,232,240,0.18); }
-      `}</style>
+      {/* Footer Terms Link */}
+      <footer className="relative z-10 text-center text-xs text-zinc-400">
+        การเข้าสู่ระบบถือว่ายอมรับ{' '}
+        <button
+          type="button"
+          onClick={() => router.push('/terms')}
+          className="text-zinc-300 hover:text-amber-400 underline transition-colors cursor-pointer"
+        >
+          ข้อกำหนดและกติกาการแข่งขัน ZODIAC ARENA
+        </button>
+      </footer>
     </main>
   );
 }
 
-function SteamIcon() {
+function CrownIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="12" fill="#1b2838" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]">
+      <path d="M2 19h20v2H2v-2zM2 5l5 3.5L12 3l5 5.5L22 5v12H2V5z" />
+    </svg>
+  );
+}
+
+function RiotIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
       <path
-        d="M12 4.5C7.86 4.5 4.5 7.86 4.5 12c0 .23.01.46.03.68l4.22 1.74a2.25 2.25 0 011.25-.38c.04 0 .08 0 .12.01l1.88-2.72v-.04a3.38 3.38 0 013.37-3.37 3.38 3.38 0 010 6.75l-2.67 1.9c0 .03.01.07.01.1a2.25 2.25 0 01-4.5 0 2.25 2.25 0 01.06-.51L5.1 14.5A7.5 7.5 0 0019.5 12 7.5 7.5 0 0012 4.5z"
-        fill="#c7d5e0"
+        d="M12.02 2L2 6.64v10.72L12.02 22l10.02-4.64V6.64L12.02 2zm6.75 14.12l-6.75 3.12-6.75-3.12V7.88l6.75-3.12 6.75 3.12v8.24z"
+        fill="#FFFFFF"
       />
-      <circle cx="14.62" cy="9.38" r="2.25" fill="#c7d5e0" />
     </svg>
   );
 }
 
 function GoogleIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+      <path
+        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+        fill="#4285F4"
+      />
+      <path
+        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+        fill="#34A853"
+      />
+      <path
+        d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
     </svg>
   );
 }

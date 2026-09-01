@@ -1,322 +1,508 @@
+// app/page.tsx
 'use client';
 
-import React, { use, useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { 
-  Shield, 
-  Flame, 
-  Zap, 
-  ArrowLeft,
-  Coins
-} from 'lucide-react';
-import { IntegrityCard, IntegrityRarity, PlayerPosition } from '@/components/showcase/IntegrityCard';
+import type { Provider } from '@supabase/supabase-js';
 
+// ข้อมูล 5 ผู้เล่นแชมป์ Spring พร้อมสถิติ Valorant Matrix
+const SPRING_CHAMPIONS = {
+  teamName: 'ZODIAC APEX',
+  record: '64W - 41L (61% WR)',
+  players: [
+    { name: 'VIPER_99', role: 'Duelist', agent: 'Jett', kda: '1.42', adr: 172.4, hs: '34%' },
+    { name: 'SHADOW_K', role: 'Initiator', agent: 'Sova', kda: '1.28', adr: 154.2, hs: '28%' },
+    { name: 'PHOENIX_A', role: 'Duelist', agent: 'Reyna', kda: '1.35', adr: 168.0, hs: '36%' },
+    { name: 'VALK_01', role: 'Controller', agent: 'Omen', kda: '1.15', adr: 138.5, hs: '24%' },
+    { name: 'CYBER_X', role: 'Sentinel', agent: 'Killjoy', kda: '1.18', adr: 142.1, hs: '26%' },
+  ],
+};
 
-// ============================================================================
-// 1. TYPES & INTERFACES
-// ============================================================================
-
-export interface TierProfile {
-  tierCode?: string;
-  formLevel?: number;
-}
-
-export interface LobbyPlayer {
-  userId: string;
-  displayName?: string;
-  avatarUrl?: string;
-  assignedPosition?: number;
-  card_rarity?: string;
-  tierProfile?: TierProfile;
-  karmaScore?: number;
-  winRate?: number;
-  currentElo?: number;
-}
-
-export interface LobbyFormation {
-  teamA?: LobbyPlayer[];
-  teamB?: LobbyPlayer[];
-}
-
-export interface LobbyData {
-  id: string;
-  status?: string;
-  formation?: LobbyFormation;
-}
-
-export interface StoreItem {
-  itemId: string;
-  name: string;
-  description: string;
-  category: 'TICKETS' | 'BOOSTERS' | 'MATERIALS' | 'COSMETICS';
-  costRewardPoints: number;
-  stockRemaining: number;
-  rarity: 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
-  icon: string;
-  badge?: string;
-}
-
-const CATALOG_ITEMS: StoreItem[] = [
-  { itemId: 'TICKET_GASHA_GENESIS', name: 'Genesis Gasha Ticket', description: 'สุ่มการ์ด Match Integrity Card ระดับ Rare - Legendary', category: 'TICKETS', costRewardPoints: 100, stockRemaining: 999, rarity: 'RARE', icon: '🎟️', badge: 'HOT' },
-  { itemId: 'PACK_BOOSTER_CARD_01', name: 'Alpha Cyber Booster Pack', description: 'การ์ดบูสเตอร์เสริมพลัง + ชิ้นส่วนการ์ด 3 ชิ้น', category: 'BOOSTERS', costRewardPoints: 250, stockRemaining: 45, rarity: 'EPIC', icon: '📦', badge: 'LIMITED' },
-  { itemId: 'MAT_CYBER_ALLOY_01', name: 'Cyber Alloy Shard (x10)', description: 'ชิ้นส่วนอัลลอยสำหรับคราฟต์กรอบ Avatar', category: 'MATERIALS', costRewardPoints: 50, stockRemaining: 200, rarity: 'COMMON', icon: '🔩' },
-];
-
-// ============================================================================
-// 2. MAIN PAGE
-// ============================================================================
-
-interface PageProps {
-  params: Promise<{
-    lobbyId: string;
-  }>;
-}
-
-export default function WaitingRoomPage({ params }: PageProps) {
-  const router = useRouter();
-  const resolvedParams = use(params);
-  const lobbyId = resolvedParams.lobbyId;
-
-  const [loading, setLoading] = useState(true);
+export default function HomePage() {
+  const [loading, setLoading] = useState<'google' | 'riot' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lobbyData, setLobbyData] = useState<LobbyData | null>(null);
-  const [activeTab, setActiveTab] = useState<'lobby' | 'store'>('lobby');
+  const router = useRouter();
+  const supabase = createClient();
 
-  useEffect(() => {
-    const supabase = createClient();
-
-    async function fetchLobby() {
-      try {
-        setLoading(true);
-        const { data, error: fetchError } = await supabase
-          .from('daily_arena_lobbies')
-          .select('*')
-          .eq('id', lobbyId)
-          .maybeSingle();
-
-        if (fetchError || !data) {
-          setLobbyData({
-            id: lobbyId,
-            status: 'ROSTERS_LOCKED',
-            formation: {
-              teamA: [
-                { userId: 'u-1', displayName: '23savage_AFI', assignedPosition: 1, currentElo: 2350, winRate: 68, card_rarity: 'LEGENDARY' },
-                { userId: 'u-2', displayName: 'Mikoto_God', assignedPosition: 2, currentElo: 2280, winRate: 64, card_rarity: 'EPIC' },
-                { userId: 'u-3', displayName: 'Jabz_322', assignedPosition: 3, currentElo: 2190, winRate: 61, card_rarity: 'COMMON' },
-                { userId: 'u-4', displayName: 'Q_Supp', assignedPosition: 4, currentElo: 2110, winRate: 59, card_rarity: 'EPIC' },
-                { userId: 'u-5', displayName: 'Whitemon_V2', assignedPosition: 5, currentElo: 2090, winRate: 58, card_rarity: 'NONE' },
-              ],
-              teamB: [
-                { userId: 'u-6', displayName: 'Devil-llou', assignedPosition: 1, currentElo: 2310, winRate: 66, card_rarity: 'LEGENDARY' },
-                { userId: 'u-7', displayName: 'Cyber_Phantom', assignedPosition: 2, currentElo: 2240, winRate: 63, card_rarity: 'EPIC' },
-                { userId: 'u-8', displayName: 'Neon_Viper', assignedPosition: 3, currentElo: 2170, winRate: 60, card_rarity: 'COMMON' },
-                { userId: 'u-9', displayName: 'TIMS_Soft', assignedPosition: 4, currentElo: 2160, winRate: 62, card_rarity: 'EPIC' },
-                { userId: 'u-10', displayName: 'Jaunuel_Ward', assignedPosition: 5, currentElo: 2070, winRate: 56, card_rarity: 'COMMON' },
-              ],
-            }
-          });
-        } else {
-          setLobbyData(data as LobbyData);
-        }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Failed to load lobby';
-        setError(message);
-      } finally {
-        setLoading(false);
-      }
+  async function handleGoogleLogin() {
+    setLoading('google');
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      setError(error.message);
+      setLoading(null);
     }
-
-    if (lobbyId) fetchLobby();
-  }, [lobbyId]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#07090E] text-[#00D4FF] flex flex-col items-center justify-center font-mono space-y-4">
-        <span className="w-10 h-10 rounded-full border-2 border-[#00D4FF] border-t-transparent animate-spin" />
-        <p className="tracking-widest uppercase text-xs animate-pulse">Syncing Cyber Holo-Deck Protocol...</p>
-      </div>
-    );
   }
 
-  if (error && !lobbyData) {
-    return (
-      <div className="min-h-screen bg-[#07090E] text-rose-400 flex flex-col items-center justify-center font-mono space-y-4">
-        <p className="tracking-widest uppercase font-bold text-xs">⚠️ Connection Error: {error}</p>
-        <button onClick={() => router.push('/dashboard')} className="px-6 py-2 border border-rose-500/50 hover:bg-rose-500/10 text-white rounded-lg text-xs tracking-widest uppercase transition-all">
-          ← Return to Dashboard
-        </button>
-      </div>
-    );
+  async function handleRiotLogin() {
+    setLoading('riot');
+    setError(null);
+    const riotProvider = 'riot' as unknown as Provider;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: riotProvider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      setError(error.message);
+      setLoading(null);
+    }
   }
-
-  const formation = lobbyData?.formation || {};
-  const teamA = formation.teamA || [];
-  const teamB = formation.teamB || [];
 
   return (
-    <div className="min-h-screen bg-[#07090E] text-white pt-24 pb-12 px-4 md:px-8 flex flex-col justify-between font-mono selection:bg-[#00D4FF] selection:text-black">
-      <div className="absolute inset-0 bg-[radial-gradient(#00D4FF_1px,transparent_1px)] bg-size-[28px_28px] opacity-10 pointer-events-none" />
+    <main className="min-h-screen bg-[#050508] text-white flex flex-col items-center justify-center p-3 lg:p-6 font-mono relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
+      {/* Background Faceoff Image & Cyber Grid */}
+      <div className="fixed inset-0 -z-20 opacity-30 pointer-events-none">
+        <Image
+          src="/images/seasons/BG.png"
+          alt="Zodiac Arena Faceoff"
+          fill
+          sizes="100vw"
+          className="object-cover"
+          priority
+        />
+      </div>
+      <div
+        className="pointer-events-none fixed inset-0 opacity-25 -z-10"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(245, 197, 66, 0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 212, 255, 0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+        }}
+      />
+      <div className="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-b from-amber-500/15 via-rose-500/5 to-transparent rounded-full blur-[140px]" />
 
-      <div className="w-full max-w-7xl mx-auto space-y-6 z-10">
+      {/* Header Banner */}
+      <header className="relative z-10 text-center mb-6 max-w-3xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-300 text-[11px] font-bold tracking-widest uppercase mb-2 shadow-[0_0_15px_rgba(245,197,66,0.3)]">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          VALORANT YEAR LEAGUE 2026
+        </div>
+        <h1
+          className="text-3xl md:text-5xl font-black tracking-wider uppercase drop-shadow-[0_0_25px_rgba(245,197,66,0.5)]"
+          style={{ fontFamily: "'Orbitron', sans-serif" }}
+        >
+          ZODIAC <span className="text-[#F5C542]">ARENA</span>
+        </h1>
+        <p className="text-xs md:text-sm text-zinc-300 mt-1 tracking-widest font-semibold drop-shadow">
+          1 ปี = 4 SEASONS • แข่งขันต่อเนื่องตลอดทั้งปี • สะสมคะแนนลุ้นแชมป์ประจำปี
+        </p>
+      </header>
+
+      {/* 5-Card Grid Showcase with 3D Depth & Wind-Sway Physics */}
+      <div className="relative z-10 w-full max-w-[1520px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-5 items-center mb-6">
         
-        {/* TOP HEADER */}
-        <header className="flex flex-col md:flex-row items-center justify-between border-b border-slate-800 pb-4 gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#00D4FF] animate-ping" />
-              <span className="text-[#00D4FF] text-xs tracking-widest uppercase font-bold">CYBER HOLO-DECK 1.2</span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-wider text-white mt-1">
-              10-MAN INTEGRITY SHOWCASE
-            </h1>
+        {/* CARD 1: ZODIAC LEAGUE (3D PURPLE CHROME & SWAY) */}
+        <div 
+          className="card-sway-1 relative h-[550px] rounded-2xl overflow-hidden border-2 border-purple-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-purple-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(168,85,247,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(168,85,247,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/zodiacT1Y.jpg"
+              alt="Zodiac Tournament Grand Finals"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+              priority
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-purple-200 bg-purple-950/90 border border-purple-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(168,85,247,0.4)]">
+              ANNUAL FINALS
+            </span>
+            <span className="text-[10px] text-amber-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-amber-400/40">
+              TOP 12 CLASH
+            </span>
           </div>
           
-          <div className="flex items-center gap-4 bg-slate-950 border border-[#C9A84C]/40 px-5 py-2.5 rounded-xl shadow-[0_0_20px_rgba(201,168,76,0.15)]">
-            <div className="text-right">
-              <div className="text-[9px] text-zinc-500 uppercase tracking-widest">LOBBY ID</div>
-              <div className="text-[#C9A84C] font-black text-base tracking-widest">{lobbyId}</div>
-            </div>
-            <div className="h-7 w-px bg-slate-800" />
-            <div className="text-left">
-              <div className="text-[9px] text-zinc-500 uppercase tracking-widest">PROTOCOL</div>
-              <div className="text-emerald-400 font-bold text-xs tracking-wider uppercase">ALL CARDS READY</div>
-            </div>
+          <div className="text-center my-auto w-full px-1">
+            <span className="text-[10px] text-amber-300 tracking-[0.25em] uppercase font-black block mb-1 drop-shadow-[0_0_8px_rgba(245,197,66,0.8)]">
+              GRAND CHAMPIONSHIP
+            </span>
+            <h2 
+              className="w-full text-center text-3xl sm:text-4xl lg:text-[2.6rem] font-black text-white tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(168,85,247,0.95)]"
+              style={{ fontFamily: "'Orbitron', sans-serif" }}
+            >
+              ZODIAC <span className="text-purple-400">LEAGUE</span>
+            </h2>
+            <p className="text-[11px] text-zinc-200 mt-2 font-bold drop-shadow">มหาศึกรวม 12 ราศีส่งท้ายปี</p>
           </div>
-        </header>
 
-        {/* Tab Selector */}
-        <div className="flex gap-3 border-b border-slate-800 pb-2">
-          <button 
-            onClick={() => setActiveTab('lobby')} 
-            className={`px-4 py-2 text-xs font-bold tracking-widest rounded-t-lg transition-colors cursor-pointer ${
-              activeTab === 'lobby' ? 'bg-[#00D4FF]/20 text-[#00D4FF] border-b-2 border-[#00D4FF]' : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            VERSUS SHOWCASE (5v5)
-          </button>
-          <button 
-            onClick={() => setActiveTab('store')} 
-            className={`px-4 py-2 text-xs font-bold tracking-widest rounded-t-lg transition-colors cursor-pointer ${
-              activeTab === 'store' ? 'bg-[#C9A84C]/20 text-[#C9A84C] border-b-2 border-[#C9A84C]' : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            REWARDS STORE
-          </button>
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-purple-500/40 text-center shadow-lg">
+            <span className="text-[9px] text-zinc-300 block">TOTAL PRIZE POOL</span>
+            <span className="text-sm font-black text-amber-400 tracking-wider drop-shadow">ANNUAL GLORY</span>
+          </div>
         </div>
 
-        {/* MAIN BODY */}
-        {activeTab === 'lobby' ? (
-          <main className="space-y-6">
-            
-            {/* TEAM RADIANT */}
-            <section className="bg-slate-950/80 border border-[#00D4FF]/40 p-5 rounded-2xl shadow-2xl space-y-3">
-              <div className="flex items-center justify-between border-b border-[#00D4FF]/20 pb-2">
-                <h2 className="text-[#00D4FF] font-black text-sm tracking-widest flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-[#00D4FF]"/> TEAM RADIANT (ORIGIN C1)
-                </h2>
-                <span className="text-xs text-zinc-400">STATUS: <b className="text-white">5/5 DECK LOCKED</b></span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 justify-items-center">
-                {teamA.map((player: LobbyPlayer, idx: number) => (
-                  <IntegrityCard
-                    key={player.userId || idx}
-                    userId={player.userId}
-                    displayName={player.displayName ?? `Operator_${idx + 1}`}
-                    avatarUrl={player.avatarUrl}
-                    rarity={((player.card_rarity as IntegrityRarity) ?? 'NONE')}
-                    position={((player.assignedPosition || idx + 1) as PlayerPosition)}
-                    team="TEAM_A"
-                    karmaScore={player.karmaScore}
-                    winRate={player.winRate}
-                    isCurrentUser={idx === 4}
-                  />
-                ))}
-              </div>
-            </section>
-
-            {/* VS Divider */}
-            <div className="flex items-center justify-center gap-4 my-2">
-              <div className="flex-1 h-px bg-linear-to-r from-transparent via-[#00D4FF]/40 to-transparent" />
-              <div className="w-11 h-11 rounded-full border-2 border-[#C9A84C] bg-slate-950 flex items-center justify-center font-black text-sm text-[#C9A84C] shadow-[0_0_20px_rgba(201,168,76,0.4)] animate-pulse">
-                VS
-              </div>
-              <div className="flex-1 h-px bg-linear-to-r from-transparent via-[#C9A84C]/40 to-transparent" />
-            </div>
-
-            {/* TEAM DIRE */}
-            <section className="bg-slate-950/80 border border-[#C9A84C]/40 p-5 rounded-2xl shadow-2xl space-y-3">
-              <div className="flex items-center justify-between border-b border-[#C9A84C]/20 pb-2">
-                <h2 className="text-[#C9A84C] font-black text-sm tracking-widest flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-[#C9A84C]"/> TEAM DIRE (ORIGIN C4)
-                </h2>
-                <span className="text-xs text-zinc-400">STATUS: <b className="text-white">5/5 DECK LOCKED</b></span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 justify-items-center">
-                {teamB.map((player: LobbyPlayer, idx: number) => (
-                  <IntegrityCard
-                    key={player.userId || idx}
-                    userId={player.userId}
-                    displayName={player.displayName ?? `Operator_${idx + 6}`}
-                    avatarUrl={player.avatarUrl}
-                    rarity={((player.card_rarity as IntegrityRarity) ?? 'NONE')}
-                    position={((player.assignedPosition || idx + 1) as PlayerPosition)}
-                    team="TEAM_B"
-                    karmaScore={player.karmaScore}
-                    winRate={player.winRate}
-                  />
-                ))}
-              </div>
-            </section>
-          </main>
-        ) : (
-          <main className="bg-slate-950 border border-[#C9A84C]/30 rounded-2xl p-6 shadow-2xl space-y-6">
-            <div className="flex justify-between items-center bg-slate-900 p-4 rounded-xl border border-[#C9A84C]/30">
-              <div className="text-zinc-400 text-xs">AVAILABLE BALANCE</div>
-              <div className="text-2xl font-black text-[#C9A84C] flex items-center gap-2">
-                <Coins className="w-6 h-6"/> 450 PTS
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {CATALOG_ITEMS.map((item) => (
-                <div key={item.itemId} className="p-4 bg-slate-900 rounded-xl border border-slate-800 flex flex-col justify-between">
-                  <div className="text-center mb-3">
-                    <div className="text-3xl mb-2">{item.icon}</div>
-                    <h3 className="text-sm font-bold text-white">{item.name}</h3>
-                    <p className="text-xs text-zinc-400 mt-1">{item.description}</p>
-                  </div>
-                  <button className="mt-4 w-full py-2.5 bg-[#C9A84C] text-slate-950 text-xs font-black rounded-lg hover:bg-amber-400 transition-colors cursor-pointer">
-                    REDEEM ({item.costRewardPoints} PTS)
-                  </button>
-                </div>
-              ))}
-            </div>
-          </main>
-        )}
-
-        {/* FOOTER */}
-        <footer className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-800 pt-5 gap-4">
-          <button 
-            onClick={() => router.push('/dashboard')} 
-            className="px-5 py-2.5 border border-slate-700 hover:border-slate-500 text-zinc-400 hover:text-white rounded-xl transition-all text-xs tracking-widest uppercase font-bold flex items-center gap-2 cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5"/> ABORT TO DASHBOARD
-          </button>
-
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-zinc-400">
-              ROSTERS: <b className="text-[#00D4FF]">10/10 READY</b>
+        {/* CARD 2: SPRING (HIGH CONTRAST CLEAR TITLE & 3D SWAY) */}
+        <div 
+          className="card-sway-2 relative h-[550px] rounded-2xl overflow-hidden border-2 border-emerald-500/80 bg-zinc-950/50 flex flex-col justify-between p-3.5 transition-transform duration-300 hover:scale-[1.03] hover:border-emerald-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(34,197,94,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Spring.jpg"
+              alt="Spring Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-emerald-300 bg-emerald-950/90 border border-emerald-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(34,197,94,0.4)]">
+              SEASON 1 • JAN-MAR
             </span>
-            <button 
-              onClick={() => router.push(`/match/${lobbyId || 'match_01'}`)}
-              className="px-8 py-3 bg-[#00D4FF] hover:bg-[#00D4FF]/80 text-slate-950 font-black text-xs tracking-widest uppercase rounded-xl shadow-[0_0_25px_rgba(0,212,255,0.5)] transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer"
+            <div className="flex items-center gap-1 text-amber-300 bg-black/70 px-2 py-0.5 rounded border border-amber-400/40 shadow-sm">
+              <CrownIcon />
+              <span className="text-[10px] font-black tracking-wider text-amber-400">CHAMPION</span>
+            </div>
+          </div>
+{/* CARD 2: SPRING (HIGH CONTRAST GLASS HUD) */}
+<div 
+  className="card-sway-2 relative h-[550px] rounded-2xl overflow-hidden border-2 border-emerald-500/80 bg-zinc-950/50 flex flex-col justify-between p-3.5 transition-transform duration-300 hover:scale-[1.03] hover:border-emerald-400"
+  style={{
+    boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(34,197,94,0.2)',
+  }}
+>
+  <div className="absolute inset-0 -z-10">
+    <Image
+      src="/images/seasons/Spring.jpg"
+      alt="Spring Season"
+      fill
+      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+      className="object-cover"
+    />
+    {/* Dark Gradient Overlay ตรงกลางภาพเพื่อลดแสงแดดจ้า */}
+    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/60" />
+  </div>
+
+  {/* Header */}
+  <div className="flex items-center justify-between">
+    <span className="text-[10px] font-black text-emerald-300 bg-emerald-950/90 border border-emerald-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(34,197,94,0.4)]">
+      SEASON 1 • JAN-MAR
+    </span>
+    <div className="flex items-center gap-1 text-amber-300 bg-black/70 px-2 py-0.5 rounded border border-amber-400/40 shadow-sm">
+      <CrownIcon />
+      <span className="text-[10px] font-black tracking-wider text-amber-400">CHAMPION</span>
+    </div>
+  </div>
+
+  {/* SPRING TITLE PLATE: แผ่นกระจกดำตัดแสง ทำให้อ่านชัด 100% */}
+  <div className="my-auto w-full rounded-xl py-3 px-2 bg-black/75 backdrop-blur-md border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] text-center">
+    <h2 
+      className="w-full text-center text-4xl sm:text-5xl font-black text-emerald-300 tracking-tight leading-none"
+      style={{
+        textShadow: '0 0 15px #10B981, 0 0 30px #059669',
+      }}
+    >
+      SPRING
+    </h2>
+    <p className="text-[10px] text-zinc-300 uppercase tracking-widest font-black mt-1">
+      CONCLUDED • {SPRING_CHAMPIONS.record}
+    </p>
+  </div>
+
+  {/* Champion Roster Matrix */}
+  <div className="bg-black/90 backdrop-blur-md rounded-xl p-2.5 border border-emerald-500/40 shadow-xl space-y-1.5">
+    <div className="text-[10px] font-black text-amber-400 flex items-center justify-between border-b border-white/10 pb-1">
+      <span>🏆 {SPRING_CHAMPIONS.teamName}</span>
+      <span className="text-[9px] text-emerald-400 bg-emerald-950/80 px-1.5 rounded border border-emerald-500/30">
+        1st SEED
+      </span>
+    </div>
+
+    <div className="space-y-1">
+      {SPRING_CHAMPIONS.players.map((p, idx) => (
+        <div
+          key={p.name}
+          className="flex items-center justify-between bg-white/[0.04] hover:bg-white/[0.08] px-2 py-1 rounded border border-white/5 transition-colors text-[10px]"
+        >
+          <div className="flex items-center gap-1.5 truncate max-w-[125px]">
+            <span className="font-bold text-emerald-400 text-[9px]">#{idx + 1}</span>
+            <span className="font-black text-zinc-100 truncate">{p.name}</span>
+            <span className="text-[8px] text-zinc-400 bg-zinc-800/80 px-1 rounded">
+              {p.agent}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 font-mono text-[9px]">
+            <span className="text-zinc-300 font-bold">
+              <span className="text-zinc-500 text-[8px]">K/D </span>
+              {p.kda}
+            </span>
+            <span className="text-amber-300 font-bold">
+              <span className="text-zinc-500 text-[8px]">ADR </span>
+              {p.adr}
+            </span>
+            <span className="text-emerald-400 font-bold">
+              {p.hs}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+          </div>
+
+        {/* CARD 3: SUMMER (SUMMER OUTSIDE + ONLY NOW IN RED HUD BOX + 3D SWAY) */}
+        <div 
+          className="card-sway-3 relative h-[600px] lg:-mt-5 rounded-2xl overflow-hidden border-[3px] border-amber-400 bg-zinc-950/40 flex flex-col justify-between p-4 z-20 transition-transform duration-300 hover:scale-[1.04]"
+          style={{
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.95), 0 0 45px rgba(245,197,66,0.65), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 20px rgba(245,197,66,0.25)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Summer.jpg"
+              alt="Summer Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+              priority
+            />
+          </div>
+          
+          {/* Header Bar */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-amber-300 bg-amber-950/90 border border-amber-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(245,197,66,0.5)]">
+              SEASON 2 • APR-JUN
+            </span>
+            <span className="text-[10px] font-black text-rose-400 bg-rose-950/80 border border-rose-500/50 px-2 py-0.5 rounded">
+              CIRCUIT ACTIVE
+            </span>
+          </div>
+
+          {/* ZONE: SUMMER ลอยนอกกรอบ + ในกรอบเหลือเฉพาะ NOW */}
+          <div className="my-auto w-full flex flex-col items-center">
+            
+            {/* 1. SUMMER ลอยเด่นนอกกรอบ ล็อกขนาดเท่ากัน */}
+            <h2
+              className="w-full text-center text-5xl lg:text-[3.25rem] font-black tracking-tight leading-none text-[#FFF4CC] mb-2.5"
+              style={{
+                textShadow: '0 0 12px #F5C542, 0 0 25px #E67E22, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+              }}
             >
-              <Zap className="w-4 h-4 fill-current"/> INITIALIZE MATCH
+              SUMMER
+            </h2>
+
+            {/* 2. กรอบสีดำขอบแดงนีออน ครอบเฉพาะ NOW */}
+            <div className="w-full rounded-2xl py-3 px-4 bg-black/85 backdrop-blur-md border-2 border-rose-600 shadow-[0_0_35px_rgba(225,29,72,0.6)] text-center">
+              <span
+                className="text-4xl sm:text-5xl font-black tracking-widest text-[#FF1A4B] block animate-[pulse_2.5s_ease-in-out_infinite]"
+                style={{
+                  fontFamily: "'Orbitron', sans-serif",
+                  textShadow: '0 0 15px #FF1A4B, 0 0 30px #E11D48, 0 0 50px #BE123C, 0 0 70px #881337',
+                }}
+              >
+                NOW
+              </span>
+              <span className="text-[9px] text-rose-300 uppercase tracking-widest font-black block mt-1 drop-shadow">
+                LIVE TOURNAMENT PHASE
+              </span>
+            </div>
+
+          </div>
+
+          {/* Integrated Login Form */}
+          <div className="bg-black/90 backdrop-blur-md rounded-xl p-3.5 border border-amber-400/60 space-y-2.5 shadow-2xl">
+            <div className="text-center mb-0.5">
+              <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider block">
+                ATHLETE ACCESS
+              </span>
+              <span className="text-[9px] text-zinc-400">เข้าสู่ระบบเพื่อสะสมคะแนน ZP</span>
+            </div>
+
+            {error && (
+              <div className="rounded p-1.5 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 text-center">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleRiotLogin}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 px-3 text-[11px] font-bold tracking-wider text-white bg-rose-600 hover:bg-rose-500 transition-colors disabled:opacity-50 cursor-pointer shadow-[0_0_20px_rgba(244,63,94,0.5)]"
+            >
+              {loading === 'riot' ? <Spinner /> : <RiotIcon />}
+              <span>{loading === 'riot' ? 'CONNECTING...' : 'LOGIN WITH RIOT'}</span>
+            </button>
+
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2 px-3 text-[10px] font-semibold tracking-wider text-zinc-200 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {loading === 'google' ? <Spinner /> : <GoogleIcon />}
+              <span>GOOGLE LOGIN</span>
             </button>
           </div>
-        </footer>
+        </div>
+
+        {/* CARD 4: FALL (3D ORANGE FLAME & SWAY) */}
+        <div 
+          className="card-sway-4 relative h-[550px] rounded-2xl overflow-hidden border-2 border-orange-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-orange-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(249,115,22,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(249,115,22,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Fall.jpg"
+              alt="Fall Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-orange-300 bg-orange-950/90 border border-orange-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(249,115,22,0.4)]">
+              SEASON 3 • JUL-SEP
+            </span>
+            <span className="text-[10px] text-orange-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-orange-400/40">
+              NEXT SEASON
+            </span>
+          </div>
+
+          <div className="text-center my-auto w-full px-1">
+            <h2 
+              className="w-full text-center text-5xl lg:text-[3.25rem] font-black text-orange-400 tracking-tight leading-none drop-shadow-[0_0_25px_rgba(251,146,60,0.95)]"
+              style={{
+                textShadow: '0 0 12px #F97316, 0 0 24px #EA580C, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+              }}
+            >
+              FALL
+            </h2>
+            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black drop-shadow mt-1.5">UPCOMING CIRCUIT</p>
+          </div>
+
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-orange-500/40 text-center shadow-lg">
+            <span className="text-[10px] text-zinc-300 block mb-1">REGISTRATION OPENS</span>
+            <span className="text-xs font-black text-orange-400">JULY 2026</span>
+          </div>
+        </div>
+
+        {/* CARD 5: WINTER (3D CYAN ICE & SWAY) */}
+        <div 
+          className="card-sway-5 relative h-[550px] rounded-2xl overflow-hidden border-2 border-cyan-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-cyan-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(14,165,233,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(14,165,233,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Winter.jpg"
+              alt="Winter Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-cyan-300 bg-cyan-950/90 border border-cyan-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(14,165,233,0.4)]">
+              SEASON 4 • OCT-DEC
+            </span>
+            <span className="text-[10px] text-cyan-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-cyan-400/40">
+              LOCKED
+            </span>
+          </div>
+
+          <div className="text-center my-auto w-full px-1">
+            <h2 
+              className="w-full text-center text-5xl lg:text-[3.25rem] font-black text-cyan-300 tracking-tight leading-none drop-shadow-[0_0_25px_rgba(103,232,249,0.95)]"
+              style={{
+                textShadow: '0 0 12px #06B6D4, 0 0 24px #0891B2, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+              }}
+            >
+              WINTER
+            </h2>
+            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black drop-shadow mt-1.5">FINAL QUALIFIER</p>
+          </div>
+
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-cyan-500/40 text-center shadow-lg">
+            <span className="text-[10px] text-zinc-300 block mb-1">LAST CHANCE POINTS</span>
+            <span className="text-xs font-black text-cyan-300">OCTOBER 2026</span>
+          </div>
+        </div>
 
       </div>
-    </div>
+
+      {/* Footer Terms Link */}
+      <footer className="relative z-10 text-center text-xs text-zinc-400">
+        การเข้าสู่ระบบถือว่ายอมรับ{' '}
+        <button
+          type="button"
+          onClick={() => router.push('/terms')}
+          className="text-zinc-300 hover:text-amber-400 underline transition-colors cursor-pointer"
+        >
+          ข้อกำหนดและกติกาการแข่งขัน ZODIAC ARENA
+        </button>
+      </footer>
+    </main>
+  );
+}
+
+function CrownIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]">
+      <path d="M2 19h20v2H2v-2zM2 5l5 3.5L12 3l5 5.5L22 5v12H2V5z" />
+    </svg>
+  );
+}
+
+function RiotIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12.02 2L2 6.64v10.72L12.02 22l10.02-4.64V6.64L12.02 2zm6.75 14.12l-6.75 3.12-6.75-3.12V7.88l6.75-3.12 6.75 3.12v8.24z"
+        fill="#FFFFFF"
+      />
+    </svg>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+      <path
+        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+        fill="#4285F4"
+      />
+      <path
+        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+        fill="#34A853"
+      />
+      <path
+        d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
+    </svg>
   );
 }

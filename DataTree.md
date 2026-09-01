@@ -1,6 +1,6 @@
 # 🌳 AVELAi Master Data Tree & Schema Map (V1.06)
 
-> 💎 **Last Updated:** เวลา 10:10:35 จันทร์ 31/08/2026
+> 💎 **Last Updated:** เวลา 06:40:19 อังคาร 01/09/2026
 
 ีวิธีใช้ = node update-tree.mjs
 
@@ -17,16 +17,6 @@ avelai/
 │   │   ├── ave/
 │   │   │   └── chat/
 │   │   │       └── route.ts
-│   │   ├── dota/
-│   │   │   ├── killpoints/
-│   │   │   │   └── route.ts
-│   │   │   ├── player/
-│   │   │   │   └── route.ts
-│   │   │   └── sync/
-│   │   │       └── route.ts
-│   │   ├── draft/
-│   │   │   └── finalize/
-│   │   │       └── route.ts
 │   │   ├── health/
 │   │   │   └── route.ts
 │   │   ├── integrity/
@@ -34,8 +24,6 @@ avelai/
 │   │   │       ├── route.ts
 │   │   │       └── TierBadge.tsx
 │   │   ├── matches/
-│   │   │   └── evaluate/
-│   │   │       └── route.ts
 │   │   └── v1/
 │   │       ├── daily/
 │   │       │   ├── matchmake/
@@ -79,9 +67,6 @@ avelai/
 │   │       └── route.ts
 │   ├── dashboard/
 │   │   └── page.tsx
-│   ├── draft/
-│   │   └── [id]/
-│   │       └── page.tsx
 │   ├── leaderboard/
 │   │   └── page.tsx
 │   ├── login/
@@ -136,28 +121,18 @@ avelai/
 ├── lib/
 │   ├── arena/
 │   │   └── ticketService.ts
-│   ├── dota/
-│   │   ├── getHeroes.ts
-│   │   └── getItems.ts
-│   ├── draft/
-│   │   └── snakeDraftEngine.ts
 │   ├── matchmaking/
 │   │   └── dailyArenaTierEngine.ts
 │   ├── supabase/
-│   │   ├── dota/
-│   │   │   ├── calculateKP.ts
-│   │   │   └── fetchMatch.ts
 │   │   ├── client.ts
 │   │   └── server.ts
-│   ├── tournament/
-│   │   ├── bracketEngine.ts
-│   │   ├── circuitPoints.ts
-│   │   ├── leaderboardService.ts
-│   │   ├── monthlyDoubleElim.ts
-│   │   ├── prizeCalculator.ts
-│   │   └── swissPairing.ts
-│   ├── dotaAssets.ts
-│   └── performanceCalculator.ts
+│   └── tournament/
+│       ├── bracketEngine.ts
+│       ├── circuitPoints.ts
+│       ├── leaderboardService.ts
+│       ├── monthlyDoubleElim.ts
+│       ├── prizeCalculator.ts
+│       └── swissPairing.ts
 ├── src/
 │   └── components/
 │       └── profile/

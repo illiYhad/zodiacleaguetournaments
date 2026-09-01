@@ -1,166 +1,449 @@
-'use client'
+// app/page.tsx หรือ app/login/page.tsx
+'use client';
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import React, { useState } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import type { Provider } from '@supabase/supabase-js';
+
+// ข้อมูล 5 ผู้เล่นแชมป์ Spring พร้อมสถิติ Valorant Matrix
+const SPRING_CHAMPIONS = {
+  teamName: 'ZODIAC APEX',
+  record: '64W - 41L (61% WR)',
+  players: [
+    { name: 'VIPER_99', role: 'Duelist', agent: 'Jett', kda: '1.42', adr: 172.4, hs: '34%' },
+    { name: 'SHADOW_K', role: 'Initiator', agent: 'Sova', kda: '1.28', adr: 154.2, hs: '28%' },
+    { name: 'PHOENIX_A', role: 'Duelist', agent: 'Reyna', kda: '1.35', adr: 168.0, hs: '36%' },
+    { name: 'VALK_01', role: 'Controller', agent: 'Omen', kda: '1.15', adr: 138.5, hs: '24%' },
+    { name: 'CYBER_X', role: 'Sentinel', agent: 'Killjoy', kda: '1.18', adr: 142.1, hs: '26%' },
+  ],
+};
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState<'google' | 'steam' | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const supabase = createClient()
+  const [loading, setLoading] = useState<'google' | 'riot' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
 
   async function handleGoogleLogin() {
-    setLoading('google')
-    setError(null)
-
+    setLoading('google');
+    setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
     if (error) {
-      setError(error.message)
-      setLoading(null)
+      setError(error.message);
+      setLoading(null);
     }
-    // ถ้าสำเร็จ browser จะ redirect ไป Google อัตโนมัติ
   }
 
-  async function handleSteamLogin() {
-    setLoading('steam')
-    setError(null)
-
-    // Steam ใช้ OpenID — redirect ไป Steam โดยตรง
-    // Supabase ยังไม่รองรับ Steam native → ใช้ custom flow
-    // TODO: implement Steam OpenID flow
-    // สำหรับตอนนี้ redirect ไปหน้า coming soon
-    setTimeout(() => {
-      setError('Steam login coming soon — กำลังพัฒนาอยู่ค่ะ')
-      setLoading(null)
-    }, 500)
+  async function handleRiotLogin() {
+    setLoading('riot');
+    setError(null);
+    const riotProvider = 'riot' as unknown as Provider;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: riotProvider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      setError(error.message);
+      setLoading(null);
+    }
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4">
-      {/* Background glow */}
+    <main className="min-h-screen bg-[#050508] text-white flex flex-col items-center justify-center p-3 lg:p-6 font-mono relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
+      {/* Background Faceoff Image & Cyber Grid */}
+      <div className="fixed inset-0 -z-20 opacity-30 pointer-events-none">
+        <Image
+          src="/images/seasons/BG.png"
+          alt="Zodiac Arena Faceoff"
+          fill
+          sizes="100vw"
+          className="object-cover"
+          priority
+        />
+      </div>
       <div
-        className="pointer-events-none fixed inset-0"
-        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 opacity-25 -z-10"
         style={{
-          background:
-            'radial-gradient(ellipse 60% 40% at 50% 0%, rgba(99,102,241,0.12) 0%, transparent 70%)',
+          backgroundImage: `
+            linear-gradient(rgba(245, 197, 66, 0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 212, 255, 0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
         }}
       />
+      <div className="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-b from-amber-500/15 via-rose-500/5 to-transparent rounded-full blur-[140px]" />
 
-      <div className="relative w-full max-w-sm">
-        {/* Logo */}
-        <div className="mb-10 text-center">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <span
-              className="text-3xl font-black tracking-tight text-white"
-              style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.04em' }}
-            >
-              AVEL<span style={{ color: '#C9A84C' }}>A</span>i
-            </span>
-          </div>
-          <p className="text-sm text-zinc-500 tracking-widest uppercase">
-            Esports Arena League Ai
-          </p>
+      {/* Header Banner */}
+      <header className="relative z-10 text-center mb-6 max-w-3xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-300 text-[11px] font-bold tracking-widest uppercase mb-2 shadow-[0_0_15px_rgba(245,197,66,0.3)]">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          VALORANT YEAR LEAGUE 2026
         </div>
+        <h1
+          className="text-3xl md:text-5xl font-black tracking-wider uppercase drop-shadow-[0_0_25px_rgba(245,197,66,0.5)]"
+          style={{ fontFamily: "'Orbitron', sans-serif" }}
+        >
+          ZODIAC <span className="text-[#F5C542]">ARENA</span>
+        </h1>
+        <p className="text-xs md:text-sm text-zinc-300 mt-1 tracking-widest font-semibold drop-shadow">
+          1 ปี = 4 SEASONS • แข่งขันต่อเนื่องตลอดทั้งปี • สะสมคะแนนลุ้นแชมป์ประจำปี
+        </p>
+      </header>
 
-        {/* Card */}
-        <div
-          className="rounded-2xl p-8"
+      {/* 5-Card Grid Showcase with 3D Depth & Wind-Sway Physics */}
+      <div className="relative z-10 w-full max-w-[1520px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-5 items-center mb-6">
+        
+        {/* CARD 1: ZODIAC LEAGUE */}
+        <div 
+          className="card-sway-1 relative h-[550px] rounded-2xl overflow-hidden border-2 border-purple-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-purple-400"
           style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            backdropFilter: 'blur(16px)',
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(168,85,247,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(168,85,247,0.2)',
           }}
         >
-          <h1 className="text-lg font-semibold text-white mb-1">ยินดีต้อนรับ</h1>
-          <p className="text-sm text-zinc-500 mb-7">
-            เข้าสู่ระบบเพื่อเริ่มแข่งขัน
-          </p>
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/zodiacT1Y.jpg"
+              alt="Zodiac Tournament Grand Finals"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+              priority
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-purple-200 bg-purple-950/90 border border-purple-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(168,85,247,0.4)]">
+              ANNUAL FINALS
+            </span>
+            <span className="text-[10px] text-amber-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-amber-400/40">
+              TOP 12 CLASH
+            </span>
+          </div>
+          
+          <div className="text-center my-auto w-full px-1">
+            <span className="text-[10px] text-amber-300 tracking-[0.25em] uppercase font-black block mb-1 drop-shadow-[0_0_8px_rgba(245,197,66,0.8)]">
+              GRAND CHAMPIONSHIP
+            </span>
+            <h2 
+              className="w-full text-center text-3xl sm:text-4xl lg:text-[2.6rem] font-black text-white tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(168,85,247,0.95)]"
+              style={{ fontFamily: "'Orbitron', sans-serif" }}
+            >
+              ZODIAC <span className="text-purple-400">LEAGUE</span>
+            </h2>
+            <p className="text-[11px] text-zinc-200 mt-2 font-bold drop-shadow">มหาศึกรวม 12 ราศีส่งท้ายปี</p>
+          </div>
 
-          {/* Error */}
-          {error && (
-            <div className="mb-5 rounded-lg px-4 py-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20">
-              {error}
-            </div>
-          )}
-
-          {/* Google */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading !== null}
-            className="w-full flex items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white transition-all duration-150 mb-3 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              background: loading === 'google' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.1)',
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) (e.currentTarget.style.background = 'rgba(255,255,255,0.11)')
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')
-            }}
-          >
-            {loading === 'google' ? (
-              <Spinner />
-            ) : (
-              <GoogleIcon />
-            )}
-            {loading === 'google' ? 'กำลังเชื่อมต่อ...' : 'เข้าสู่ระบบด้วย Google'}
-          </button>
-
-          {/* Steam */}
-          <button
-            onClick={handleSteamLogin}
-            disabled={loading !== null}
-            className="w-full flex items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              background: loading === 'steam' ? 'rgba(23,47,79,0.5)' : 'rgba(23,47,79,0.4)',
-              border: '1px solid rgba(59,130,246,0.2)',
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) (e.currentTarget.style.background = 'rgba(23,47,79,0.65)')
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) (e.currentTarget.style.background = 'rgba(23,47,79,0.4)')
-            }}
-          >
-            {loading === 'steam' ? (
-              <Spinner />
-            ) : (
-              <SteamIcon />
-            )}
-            {loading === 'steam' ? 'กำลังเชื่อมต่อ...' : 'เข้าสู่ระบบด้วย Steam'}
-          </button>
-
-          {/* Divider */}
-          <div className="mt-7 pt-6 border-t border-white/5 text-center">
-            <p className="text-xs text-zinc-600">
-              การเข้าสู่ระบบถือว่าคุณยอมรับ{' '}
-              <a href="/terms" className="text-zinc-400 hover:text-white transition-colors">
-                เงื่อนไขการใช้งาน
-              </a>
-            </p>
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-purple-500/40 text-center shadow-lg">
+            <span className="text-[9px] text-zinc-300 block">TOTAL PRIZE POOL</span>
+            <span className="text-sm font-black text-amber-400 tracking-wider drop-shadow">ANNUAL GLORY</span>
           </div>
         </div>
 
-        {/* Bottom tagline */}
-        <p className="mt-6 text-center text-xs text-zinc-700">
-          Powered by AI · Built for Thai Esports
-        </p>
+        {/* CARD 2: SPRING (CLEAR CONTRAST HUD PLATE) */}
+        <div 
+          className="card-sway-2 relative h-[550px] rounded-2xl overflow-hidden border-2 border-emerald-500/80 bg-zinc-950/50 flex flex-col justify-between p-3.5 transition-transform duration-300 hover:scale-[1.03] hover:border-emerald-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(34,197,94,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Spring.jpg"
+              alt="Spring Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-emerald-300 bg-emerald-950/90 border border-emerald-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(34,197,94,0.4)]">
+              SEASON 1 • JAN-MAR
+            </span>
+            <div className="flex items-center gap-1 text-amber-300 bg-black/70 px-2 py-0.5 rounded border border-amber-400/40 shadow-sm">
+              <CrownIcon />
+              <span className="text-[10px] font-black tracking-wider text-amber-400">CHAMPION</span>
+            </div>
+          </div>
+
+          {/* SPRING TITLE PLATE: ตัดแสงจ้าด้วย Dark Plate ชัดเจน 100% */}
+          <div className="my-auto w-full rounded-2xl py-3.5 px-3 bg-black/80 backdrop-blur-md border border-emerald-500/50 shadow-[0_0_25px_rgba(16,185,129,0.35)] text-center">
+            <h2 
+              className="w-full text-center text-4xl sm:text-5xl font-black text-emerald-300 tracking-tight leading-none"
+              style={{
+                textShadow: '0 0 15px #10B981, 0 0 30px #059669',
+              }}
+            >
+              SPRING
+            </h2>
+            <p className="text-[10px] text-zinc-300 uppercase tracking-widest font-black mt-1.5 drop-shadow">
+              CONCLUDED • {SPRING_CHAMPIONS.record}
+            </p>
+          </div>
+
+          {/* Champion Roster Matrix */}
+          <div className="bg-black/90 backdrop-blur-md rounded-xl p-2.5 border border-emerald-500/40 shadow-xl space-y-1.5">
+            <div className="text-[10px] font-black text-amber-400 flex items-center justify-between border-b border-white/10 pb-1">
+              <span>🏆 {SPRING_CHAMPIONS.teamName}</span>
+              <span className="text-[9px] text-emerald-400 bg-emerald-950/80 px-1.5 rounded border border-emerald-500/30">
+                1st SEED
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              {SPRING_CHAMPIONS.players.map((p, idx) => (
+                <div
+                  key={p.name}
+                  className="flex items-center justify-between bg-white/[0.04] hover:bg-white/[0.08] px-2 py-1 rounded border border-white/5 transition-colors text-[10px]"
+                >
+                  <div className="flex items-center gap-1.5 truncate max-w-[125px]">
+                    <span className="font-bold text-emerald-400 text-[9px]">#{idx + 1}</span>
+                    <span className="font-black text-zinc-100 truncate">{p.name}</span>
+                    <span className="text-[8px] text-zinc-400 bg-zinc-800/80 px-1 rounded">
+                      {p.agent}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-[9px]">
+                    <span className="text-zinc-300 font-bold">
+                      <span className="text-zinc-500 text-[8px]">K/D </span>
+                      {p.kda}
+                    </span>
+                    <span className="text-amber-300 font-bold">
+                      <span className="text-zinc-500 text-[8px]">ADR </span>
+                      {p.adr}
+                    </span>
+                    <span className="text-emerald-400 font-bold">
+                      {p.hs}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* CARD 3: SUMMER (SUMMER OUTSIDE + ONLY NOW IN RED HUD BOX) */}
+        <div 
+          className="card-sway-3 relative h-[600px] lg:-mt-5 rounded-2xl overflow-hidden border-[3px] border-amber-400 bg-zinc-950/40 flex flex-col justify-between p-4 z-20 transition-transform duration-300 hover:scale-[1.04]"
+          style={{
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.95), 0 0 45px rgba(245,197,66,0.65), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 20px rgba(245,197,66,0.25)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Summer.jpg"
+              alt="Summer Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+              priority
+            />
+          </div>
+          
+          {/* Header Bar */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-amber-300 bg-amber-950/90 border border-amber-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(245,197,66,0.5)]">
+              SEASON 2 • APR-JUN
+            </span>
+            <span className="text-[10px] font-black text-rose-400 bg-rose-950/80 border border-rose-500/50 px-2 py-0.5 rounded">
+              CIRCUIT ACTIVE
+            </span>
+          </div>
+
+          {/* ZONE: SUMMER ลอยนอกกรอบ + ในกรอบเหลือเฉพาะ NOW */}
+          <div className="my-auto w-full flex flex-col items-center">
+            
+            {/* 1. SUMMER ลอยเด่นนอกกรอบ */}
+            <h2
+              className="w-full text-center text-4xl sm:text-5xl font-black tracking-tight leading-none text-[#FFF4CC] mb-2.5"
+              style={{
+                textShadow: '0 0 12px #F5C542, 0 0 25px #E67E22, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+              }}
+            >
+              SUMMER
+            </h2>
+
+            {/* 2. กรอบสีดำขอบแดงนีออน ครอบเฉพาะ NOW */}
+            <div className="w-full rounded-2xl py-3 px-4 bg-black/85 backdrop-blur-md border-2 border-rose-600 shadow-[0_0_35px_rgba(225,29,72,0.6)] text-center">
+              <span
+                className="text-4xl sm:text-5xl font-black tracking-widest text-[#FF1A4B] block animate-[pulse_2.5s_ease-in-out_infinite]"
+                style={{
+                  fontFamily: "'Orbitron', sans-serif",
+                  textShadow: '0 0 15px #FF1A4B, 0 0 30px #E11D48, 0 0 50px #BE123C, 0 0 70px #881337',
+                }}
+              >
+                NOW
+              </span>
+              <span className="text-[9px] text-rose-300 uppercase tracking-widest font-black block mt-1 drop-shadow">
+                LIVE TOURNAMENT PHASE
+              </span>
+            </div>
+
+          </div>
+
+          {/* Integrated Login Form */}
+          <div className="bg-black/90 backdrop-blur-md rounded-xl p-3.5 border border-amber-400/60 space-y-2.5 shadow-2xl">
+            <div className="text-center mb-0.5">
+              <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider block">
+                ATHLETE ACCESS
+              </span>
+              <span className="text-[9px] text-zinc-400">เข้าสู่ระบบเพื่อสะสมคะแนน ZP</span>
+            </div>
+
+            {error && (
+              <div className="rounded p-1.5 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 text-center">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleRiotLogin}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 px-3 text-[11px] font-bold tracking-wider text-white bg-rose-600 hover:bg-rose-500 transition-colors disabled:opacity-50 cursor-pointer shadow-[0_0_20px_rgba(244,63,94,0.5)]"
+            >
+              {loading === 'riot' ? <Spinner /> : <RiotIcon />}
+              <span>{loading === 'riot' ? 'CONNECTING...' : 'LOGIN WITH RIOT'}</span>
+            </button>
+
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2 px-3 text-[10px] font-semibold tracking-wider text-zinc-200 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {loading === 'google' ? <Spinner /> : <GoogleIcon />}
+              <span>GOOGLE LOGIN</span>
+            </button>
+          </div>
+        </div>
+
+        {/* CARD 4: FALL */}
+        <div 
+          className="card-sway-4 relative h-[550px] rounded-2xl overflow-hidden border-2 border-orange-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-orange-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(249,115,22,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(249,115,22,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Fall.jpg"
+              alt="Fall Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-orange-300 bg-orange-950/90 border border-orange-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(249,115,22,0.4)]">
+              SEASON 3 • JUL-SEP
+            </span>
+            <span className="text-[10px] text-orange-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-orange-400/40">
+              NEXT SEASON
+            </span>
+          </div>
+
+          <div className="text-center my-auto w-full px-1">
+            <h2 
+              className="w-full text-center text-4xl sm:text-5xl font-black text-orange-400 tracking-tight leading-none drop-shadow-[0_0_25px_rgba(251,146,60,0.95)]"
+              style={{
+                textShadow: '0 0 12px #F97316, 0 0 24px #EA580C, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+              }}
+            >
+              FALL
+            </h2>
+            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black drop-shadow mt-1.5">UPCOMING CIRCUIT</p>
+          </div>
+
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-orange-500/40 text-center shadow-lg">
+            <span className="text-[10px] text-zinc-300 block mb-1">REGISTRATION OPENS</span>
+            <span className="text-xs font-black text-orange-400">JULY 2026</span>
+          </div>
+        </div>
+
+        {/* CARD 5: WINTER */}
+        <div 
+          className="card-sway-5 relative h-[550px] rounded-2xl overflow-hidden border-2 border-cyan-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-cyan-400"
+          style={{
+            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(14,165,233,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(14,165,233,0.2)',
+          }}
+        >
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/seasons/Winter.jpg"
+              alt="Winter Season"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-cyan-300 bg-cyan-950/90 border border-cyan-400/60 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(14,165,233,0.4)]">
+              SEASON 4 • OCT-DEC
+            </span>
+            <span className="text-[10px] text-cyan-300 font-bold bg-black/60 px-2 py-0.5 rounded border border-cyan-400/40">
+              LOCKED
+            </span>
+          </div>
+
+          <div className="text-center my-auto w-full px-1">
+            <h2 
+              className="w-full text-center text-4xl sm:text-5xl font-black text-cyan-300 tracking-tight leading-none drop-shadow-[0_0_25px_rgba(103,232,249,0.95)]"
+              style={{
+                textShadow: '0 0 12px #06B6D4, 0 0 24px #0891B2, 0 4px 12px rgba(0,0,0,0.95), 0 0 2px #000000',
+              }}
+            >
+              WINTER
+            </h2>
+            <p className="text-[11px] text-zinc-100 tracking-widest uppercase font-black drop-shadow mt-1.5">FINAL QUALIFIER</p>
+          </div>
+
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-3 border border-cyan-500/40 text-center shadow-lg">
+            <span className="text-[10px] text-zinc-300 block mb-1">LAST CHANCE POINTS</span>
+            <span className="text-xs font-black text-cyan-300">OCTOBER 2026</span>
+          </div>
+        </div>
+
       </div>
+
+      {/* Footer Terms Link */}
+      <footer className="relative z-10 text-center text-xs text-zinc-400">
+        การเข้าสู่ระบบถือว่ายอมรับ{' '}
+        <button
+          type="button"
+          onClick={() => router.push('/terms')}
+          className="text-zinc-300 hover:text-amber-400 underline transition-colors cursor-pointer"
+        >
+          ข้อกำหนดและกติกาการแข่งขัน ZODIAC ARENA
+        </button>
+      </footer>
     </main>
-  )
+  );
+}
+
+function CrownIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]">
+      <path d="M2 19h20v2H2v-2zM2 5l5 3.5L12 3l5 5.5L22 5v12H2V5z" />
+    </svg>
+  );
+}
+
+function RiotIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12.02 2L2 6.64v10.72L12.02 22l10.02-4.64V6.64L12.02 2zm6.75 14.12l-6.75 3.12-6.75-3.12V7.88l6.75-3.12 6.75 3.12v8.24z"
+        fill="#FFFFFF"
+      />
+    </svg>
+  );
 }
 
 function GoogleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+    <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
       <path
         d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
         fill="#4285F4"
@@ -178,39 +461,18 @@ function GoogleIcon() {
         fill="#EA4335"
       />
     </svg>
-  )
-}
-
-function SteamIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.606 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.497 1.009 2.455-.397.957-1.497 1.41-2.455 1.012zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.662 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.252 0-2.265-1.014-2.265-2.265z" />
-    </svg>
-  )
+  );
 }
 
 function Spinner() {
   return (
-    <svg
-      className="animate-spin"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
+    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path
         className="opacity-75"
         fill="currentColor"
         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
       />
     </svg>
-  )
+  );
 }
