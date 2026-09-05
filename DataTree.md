@@ -1,6 +1,6 @@
 # 🌳 Zpdoac Arena Master Data Tree & Schema Map (V1.06)
 
-> 💎 **Last Updated:** เวลา 11:59:39 พุธ 02/09/2026
+> 💎 **Last Updated:** เวลา 00:52:55 อาทิตย์ 06/09/2026
 
 ีวิธีใช้ = node update-tree.mjs
 
@@ -78,18 +78,6 @@ avelai/
 │   ├── lobby/
 │   ├── login/
 │   │   └── page.tsx
-│   ├── match/
-│   │   └── [matchId]/
-│   │       ├── components/
-│   │       │   ├── DeepAnalyticsBoard.tsx
-│   │       │   ├── KPBreakdownTable.tsx
-│   │       │   ├── KPDistributionChart.tsx
-│   │       │   ├── MatchDetailView.tsx
-│   │       │   ├── MatchHeader.tsx
-│   │       │   ├── OverviewTable.tsx
-│   │       │   ├── PerformanceRadar.tsx
-│   │       │   └── TabNav.tsx
-│   │       └── page.tsx
 │   ├── matches/
 │   │   └── page.tsx
 │   ├── match-history/
