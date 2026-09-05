@@ -1,4 +1,3 @@
-// app/page.tsx หรือ app/login/page.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -21,34 +20,27 @@ const SPRING_CHAMPIONS = {
 };
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState<'google' | 'riot' | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
-  async function handleGoogleLogin() {
-    setLoading('google');
+  // ฟังก์ชันล็อกอินผ่าน Supabase Auth รองรับทุก Provider (Google, Discord, Facebook)
+  async function handleOAuthLogin(provider: Provider) {
+    setLoading(provider);
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) {
-      setError(error.message);
-      setLoading(null);
-    }
-  }
-
-  async function handleRiotLogin() {
-    setLoading('riot');
-    setError(null);
-    const riotProvider = 'riot' as unknown as Provider;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: riotProvider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) throw error;
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+      }
       setLoading(null);
     }
   }
@@ -95,12 +87,12 @@ export default function LoginPage() {
         </p>
       </header>
 
-      {/* 5-Card Grid Showcase with 3D Depth & Wind-Sway Physics */}
+      {/* 5-Card Grid Showcase with Clean Static & Hover Effects */}
       <div className="relative z-10 w-full max-w-[1520px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-5 items-center mb-6">
         
         {/* CARD 1: ZODIAC LEAGUE */}
         <div 
-          className="card-sway-1 relative h-[550px] rounded-2xl overflow-hidden border-2 border-purple-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-purple-400"
+          className="relative h-[550px] rounded-2xl overflow-hidden border-2 border-purple-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-all duration-300 hover:scale-[1.02] hover:border-purple-400"
           style={{
             boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(168,85,247,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(168,85,247,0.2)',
           }}
@@ -143,9 +135,9 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* CARD 2: SPRING (CLEAR CONTRAST HUD PLATE) */}
+        {/* CARD 2: SPRING */}
         <div 
-          className="card-sway-2 relative h-[550px] rounded-2xl overflow-hidden border-2 border-emerald-500/80 bg-zinc-950/50 flex flex-col justify-between p-3.5 transition-transform duration-300 hover:scale-[1.03] hover:border-emerald-400"
+          className="relative h-[550px] rounded-2xl overflow-hidden border-2 border-emerald-500/80 bg-zinc-950/50 flex flex-col justify-between p-3.5 transition-all duration-300 hover:scale-[1.02] hover:border-emerald-400"
           style={{
             boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(34,197,94,0.2)',
           }}
@@ -169,7 +161,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* SPRING TITLE PLATE: ตัดแสงจ้าด้วย Dark Plate ชัดเจน 100% */}
+          {/* SPRING TITLE PLATE */}
           <div className="my-auto w-full rounded-2xl py-3.5 px-3 bg-black/80 backdrop-blur-md border border-emerald-500/50 shadow-[0_0_25px_rgba(16,185,129,0.35)] text-center">
             <h2 
               className="w-full text-center text-4xl sm:text-5xl font-black text-emerald-300 tracking-tight leading-none"
@@ -225,9 +217,9 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* CARD 3: SUMMER (SUMMER OUTSIDE + ONLY NOW IN RED HUD BOX) */}
+        {/* CARD 3: SUMMER (MAIN ACTIVE CARD) */}
         <div 
-          className="card-sway-3 relative h-[600px] lg:-mt-5 rounded-2xl overflow-hidden border-[3px] border-amber-400 bg-zinc-950/40 flex flex-col justify-between p-4 z-20 transition-transform duration-300 hover:scale-[1.04]"
+          className="relative h-[600px] lg:-mt-5 rounded-2xl overflow-hidden border-[3px] border-amber-400 bg-zinc-950/40 flex flex-col justify-between p-4 z-20 transition-all duration-300 hover:scale-[1.03]"
           style={{
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.95), 0 0 45px rgba(245,197,66,0.65), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 20px rgba(245,197,66,0.25)',
           }}
@@ -253,10 +245,8 @@ export default function LoginPage() {
             </span>
           </div>
 
-          {/* ZONE: SUMMER ลอยนอกกรอบ + ในกรอบเหลือเฉพาะ NOW */}
+          {/* ZONE: SUMMER TITLE */}
           <div className="my-auto w-full flex flex-col items-center">
-            
-            {/* 1. SUMMER ลอยเด่นนอกกรอบ */}
             <h2
               className="w-full text-center text-4xl sm:text-5xl font-black tracking-tight leading-none text-[#FFF4CC] mb-2.5"
               style={{
@@ -266,13 +256,12 @@ export default function LoginPage() {
               SUMMER
             </h2>
 
-            {/* 2. กรอบสีดำขอบแดงนีออน ครอบเฉพาะ NOW */}
             <div className="w-full rounded-2xl py-3 px-4 bg-black/85 backdrop-blur-md border-2 border-rose-600 shadow-[0_0_35px_rgba(225,29,72,0.6)] text-center">
               <span
-                className="text-4xl sm:text-5xl font-black tracking-widest text-[#FF1A4B] block animate-[pulse_2.5s_ease-in-out_infinite]"
+                className="text-4xl sm:text-5xl font-black tracking-widest text-[#FF1A4B] block"
                 style={{
                   fontFamily: "'Orbitron', sans-serif",
-                  textShadow: '0 0 15px #FF1A4B, 0 0 30px #E11D48, 0 0 50px #BE123C, 0 0 70px #881337',
+                  textShadow: '0 0 15px #FF1A4B, 0 0 30px #E11D48, 0 0 50px #BE123C',
                 }}
               >
                 NOW
@@ -281,16 +270,15 @@ export default function LoginPage() {
                 LIVE TOURNAMENT PHASE
               </span>
             </div>
-
           </div>
 
-          {/* Integrated Login Form */}
-          <div className="bg-black/90 backdrop-blur-md rounded-xl p-3.5 border border-amber-400/60 space-y-2.5 shadow-2xl">
+          {/* Integrated Login Form (Cleaned & Multi-Provider) */}
+          <div className="bg-black/90 backdrop-blur-md rounded-xl p-3 border border-amber-400/60 space-y-2 shadow-2xl">
             <div className="text-center mb-0.5">
               <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider block">
                 ATHLETE ACCESS
               </span>
-              <span className="text-[9px] text-zinc-400">เข้าสู่ระบบเพื่อสะสมคะแนน ZP</span>
+              <span className="text-[8px] text-zinc-400">เข้าสู่ระบบเพื่อรับรองสถานะนักกีฬา ZODIAC</span>
             </div>
 
             {error && (
@@ -299,29 +287,41 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* 1. ปุ่มหลัก: Google Login */}
             <button
-              onClick={handleRiotLogin}
+              onClick={() => handleOAuthLogin('google')}
               disabled={loading !== null}
-              className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 px-3 text-[11px] font-bold tracking-wider text-white bg-rose-600 hover:bg-rose-500 transition-colors disabled:opacity-50 cursor-pointer shadow-[0_0_20px_rgba(244,63,94,0.5)]"
-            >
-              {loading === 'riot' ? <Spinner /> : <RiotIcon />}
-              <span>{loading === 'riot' ? 'CONNECTING...' : 'LOGIN WITH RIOT'}</span>
-            </button>
-
-            <button
-              onClick={handleGoogleLogin}
-              disabled={loading !== null}
-              className="w-full flex items-center justify-center gap-2 rounded-lg py-2 px-3 text-[10px] font-semibold tracking-wider text-zinc-200 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors disabled:opacity-50 cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 px-3 text-[11px] font-extrabold tracking-wider text-black bg-gradient-to-r from-[#E8B429] to-[#b38815] hover:from-[#ffd154] hover:to-[#cfa01f] transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(232,180,41,0.3)]"
             >
               {loading === 'google' ? <Spinner /> : <GoogleIcon />}
-              <span>GOOGLE LOGIN</span>
+              <span>{loading === 'google' ? 'CONNECTING...' : 'LOGIN WITH GOOGLE'}</span>
+            </button>
+
+            {/* 2. ปุ่มเสริม: Discord Login */}
+            <button
+              onClick={() => handleOAuthLogin('discord')}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2 px-3 text-[10px] font-bold tracking-wider text-white bg-[#5865F2]/25 hover:bg-[#5865F2]/50 border border-[#5865F2]/50 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {loading === 'discord' ? <Spinner /> : <DiscordIcon />}
+              <span>{loading === 'discord' ? 'CONNECTING...' : 'LOGIN WITH DISCORD'}</span>
+            </button>
+
+            {/* 3. ปุ่มเสริม: Facebook Login */}
+            <button
+              onClick={() => handleOAuthLogin('facebook')}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center gap-2 rounded-lg py-2 px-3 text-[10px] font-bold tracking-wider text-white bg-[#1877F2]/20 hover:bg-[#1877F2]/40 border border-[#1877F2]/40 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {loading === 'facebook' ? <Spinner /> : <FacebookIcon />}
+              <span>{loading === 'facebook' ? 'CONNECTING...' : 'LOGIN WITH FACEBOOK'}</span>
             </button>
           </div>
         </div>
 
         {/* CARD 4: FALL */}
         <div 
-          className="card-sway-4 relative h-[550px] rounded-2xl overflow-hidden border-2 border-orange-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-orange-400"
+          className="relative h-[550px] rounded-2xl overflow-hidden border-2 border-orange-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-all duration-300 hover:scale-[1.02] hover:border-orange-400"
           style={{
             boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(249,115,22,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(249,115,22,0.2)',
           }}
@@ -364,7 +364,7 @@ export default function LoginPage() {
 
         {/* CARD 5: WINTER */}
         <div 
-          className="card-sway-5 relative h-[550px] rounded-2xl overflow-hidden border-2 border-cyan-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-transform duration-300 hover:scale-[1.03] hover:border-cyan-400"
+          className="relative h-[550px] rounded-2xl overflow-hidden border-2 border-cyan-500/80 bg-zinc-950/40 flex flex-col justify-between p-4 transition-all duration-300 hover:scale-[1.02] hover:border-cyan-400"
           style={{
             boxShadow: '0 20px 40px -15px rgba(0,0,0,0.9), 0 0 30px rgba(14,165,233,0.35), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 15px rgba(14,165,233,0.2)',
           }}
@@ -430,17 +430,6 @@ function CrownIcon() {
   );
 }
 
-function RiotIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12.02 2L2 6.64v10.72L12.02 22l10.02-4.64V6.64L12.02 2zm6.75 14.12l-6.75 3.12-6.75-3.12V7.88l6.75-3.12 6.75 3.12v8.24z"
-        fill="#FFFFFF"
-      />
-    </svg>
-  );
-}
-
 function GoogleIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
@@ -460,6 +449,22 @@ function GoogleIcon() {
         d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
         fill="#EA4335"
       />
+    </svg>
+  );
+}
+
+function DiscordIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
     </svg>
   );
 }

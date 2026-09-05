@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/dashboard';
+  const next = searchParams.get('next') ?? '/profile';
 
   if (code) {
     const cookieStore = await cookies();
@@ -23,7 +23,8 @@ export async function GET(request: Request) {
                 cookieStore.set(name, value, options)
               );
             } catch {
-              // Server Component context
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing user sessions.
             }
           },
         },
@@ -36,6 +37,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // หากเกิดข้อผิดพลาด ส่งกลับไปหน้า Login พร้อม Error
-  return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+  // หากเกิดข้อผิดพลาด ให้กลับไปหน้าล็อกอินพร้อม Error Param
+  return NextResponse.redirect(`${origin}/?error=auth_failed`);
 }

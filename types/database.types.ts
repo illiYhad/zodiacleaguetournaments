@@ -85,6 +85,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
+        Insert: Partial<Database['public']['Tables']['games']['Row']>;
+        Update: Partial<Database['public']['Tables']['games']['Row']>;
       };
       players: {
         Row: {
@@ -109,6 +111,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
+        Insert: Partial<Database['public']['Tables']['players']['Row']>;
+        Update: Partial<Database['public']['Tables']['players']['Row']>;
       };
       game_accounts: {
         Row: {
@@ -126,6 +130,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
+        Insert: Partial<Database['public']['Tables']['game_accounts']['Row']>;
+        Update: Partial<Database['public']['Tables']['game_accounts']['Row']>;
       };
       organizations: {
         Row: {
@@ -141,6 +147,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
+        Insert: Partial<Database['public']['Tables']['organizations']['Row']>;
+        Update: Partial<Database['public']['Tables']['organizations']['Row']>;
       };
       teams: {
         Row: {
@@ -159,6 +167,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
+        Insert: Partial<Database['public']['Tables']['teams']['Row']>;
+        Update: Partial<Database['public']['Tables']['teams']['Row']>;
       };
       team_members: {
         Row: {
@@ -173,6 +183,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
+        Insert: Partial<Database['public']['Tables']['team_members']['Row']>;
+        Update: Partial<Database['public']['Tables']['team_members']['Row']>;
       };
       user_roles: {
         Row: {
@@ -183,6 +195,8 @@ export interface Database {
           scope_id: string | null;
           granted_at: string;
         };
+        Insert: Partial<Database['public']['Tables']['user_roles']['Row']>;
+        Update: Partial<Database['public']['Tables']['user_roles']['Row']>;
       };
       audit_logs: {
         Row: {
@@ -196,6 +210,8 @@ export interface Database {
           after_data: Json | null;
           created_at: string;
         };
+        Insert: Partial<Database['public']['Tables']['audit_logs']['Row']>;
+        Update: Partial<Database['public']['Tables']['audit_logs']['Row']>;
       };
       notifications: {
         Row: {
@@ -208,7 +224,18 @@ export interface Database {
           is_read: boolean;
           created_at: string;
         };
+        Insert: Partial<Database['public']['Tables']['notifications']['Row']>;
+        Update: Partial<Database['public']['Tables']['notifications']['Row']>;
       };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
     };
   };
 }
