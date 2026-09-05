@@ -1,4 +1,5 @@
 import React from "react";
+
 export interface ValorantMatchItem {
   id: string;
   matchId?: string;
@@ -19,28 +20,26 @@ export interface ValorantMatchItem {
   dateGroup?: string;
   tier?: string;
   badges?: string[];
+  placement?: string;
+  kdaCounts?: string;
   [key: string]: React.ReactNode | string | number | boolean | undefined | null;
 }
 
-// ผูก MatchRecord ให้ตรงกับ ValorantMatchItem
-export type MatchRecord = ValorantMatchItem;
-
-interface Props {
-  matches: MatchRecord[];
-}
+export type MatchRecord = ValorantMatchItem & {
+  isVictory: boolean;
+};
 
 interface Props {
   matches: MatchRecord[];
 }
 
 export const MatchHistoryFeed: React.FC<Props> = ({ matches }) => {
-  // Group matches by dateGroup
   const grouped = matches.reduce((acc, curr) => {
-      const key = curr.dateGroup ?? curr.date ?? "Other";
-      acc[key] = acc[key] || [];
-      acc[key].push(curr);
-      return acc;
-    }, {} as Record<string, MatchRecord[]>);
+    const key = curr.dateGroup ?? curr.date ?? "Other";
+    acc[key] = acc[key] || [];
+    acc[key].push(curr);
+    return acc;
+  }, {} as Record<string, MatchRecord[]>);
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,7 +56,6 @@ export const MatchHistoryFeed: React.FC<Props> = ({ matches }) => {
 
         return (
           <div key={date} className="flex flex-col gap-2.5">
-            {/* Group Header Strip */}
             <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#141d2a] border border-[#1f2d3d] text-xs font-bold">
               <span className="text-gray-300">{date}</span>
               <span className={wins > losses ? "text-emerald-400" : "text-red-400"}>
@@ -65,7 +63,6 @@ export const MatchHistoryFeed: React.FC<Props> = ({ matches }) => {
               </span>
             </div>
 
-            {/* Match Cards */}
             {items.map((match) => (
               <div
                 key={match.id}
@@ -75,7 +72,6 @@ export const MatchHistoryFeed: React.FC<Props> = ({ matches }) => {
                     : "bg-[#1a151b] border-red-500/30 hover:border-red-500/60"
                 }`}
               >
-                {/* Agent & Map Details */}
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-full bg-[#1e2a3a] border border-white/10 flex items-center justify-center text-sm font-black text-white">
                     {match.agent[0]}
@@ -83,15 +79,16 @@ export const MatchHistoryFeed: React.FC<Props> = ({ matches }) => {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-extrabold text-white">{match.agent}</span>
-                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-black/40 text-gray-400">
-                        {match.placement}
-                      </span>
+                      {match.placement && (
+                        <span className="text-[11px] px-1.5 py-0.5 rounded bg-black/40 text-gray-400">
+                          {match.placement}
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs text-gray-400">{match.map}</span>
                   </div>
                 </div>
 
-                {/* Match Score & Badges */}
                 <div className="flex items-center gap-4">
                   <div className="text-center">
                     <span className={`text-base font-black ${match.isVictory ? "text-emerald-400" : "text-red-400"}`}>
@@ -113,7 +110,6 @@ export const MatchHistoryFeed: React.FC<Props> = ({ matches }) => {
                   )}
                 </div>
 
-                {/* Combat Stats Column */}
                 <div className="flex items-center gap-5 text-right text-xs">
                   <div>
                     <span className="font-extrabold text-white block">{match.kd} K/D</span>
